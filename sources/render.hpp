@@ -3,8 +3,8 @@
 #include <SFML/Graphics.hpp>
 
 namespace Render{
-	
-	extern sf::Font Font;
+    
+    const sf::Font &GetFont();
 
 	inline void DrawLine(sf::Vector2f start, sf::Vector2f end, float thichness, sf::RenderTarget &rt, sf::Color color = sf::Color::White) {
 		auto direction = end - start;
@@ -25,7 +25,7 @@ namespace Render{
 	}
 
 	inline void DrawString(sf::Vector2f position, std::string str, sf::RenderTarget& rt) {
-		sf::Text text(Render::Font, str);
+		sf::Text text(Render::GetFont(), str);
 		text.setPosition(position);
 		rt.draw(text);
 	}

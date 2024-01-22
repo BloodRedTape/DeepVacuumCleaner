@@ -78,16 +78,21 @@ public:
 	}
 };
 
+template<typename AppType>
+std::unique_ptr<Application> MakeApp(sf::Vector2i size) {
+	return std::make_unique<AppType>(size);
+}
+
+template<>
+std::unique_ptr<Application> MakeApp<EvolutionTrainingApp>(sf::Vector2i size) {
+	return std::make_unique<EvolutionTrainingApp>(size, std::optional<std::string>{"best7"});
+}
+
 int main()
 {
 	srand(time(0));
-	Render::Font.loadFromFile(R"(C:\Users\E1\Downloads\BRLNSR.ttf)");
-	Render::Font.setSmooth(true);
-
-	EvolutionTrainingApp app({1919, 1080}, {"best7"});
-	//EvolutionDemoApp app({1920, 1080});
-	//MapEditor app({1920, 1080});
-	app.Run();
+	
+	MakeApp<EvolutionTrainingApp>({1920, 1080})->Run();
 	
 	return 0;
 }

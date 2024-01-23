@@ -1,5 +1,6 @@
 #include "vacuum_cleaner_operator.hpp"
 #include "math.hpp"
+#include "config.hpp"
 #include "render.hpp"
 
 VacuumCleanerOperator::VacuumCleanerOperator(NeuralNetworkAgent &&agent):
@@ -11,7 +12,7 @@ void VacuumCleanerOperator::Iterate(const Environment &env, float dt, size_t it_
 
 	bool UseDeltaTime = false;
 	auto it = m_Agent.Iterate(m_Cleaner, env, it_num);
-	auto [forward, rotation] = UseDeltaTime ? it.cwiseMul(sf::Vector2f(60, 60)) * dt : it;
+	auto [forward, rotation] = UseDeltaTime ? it.cwiseMul(CleanerSpeed) * dt : it;
 
 	if(std::abs(forward) < Eps && std::abs(rotation) < Eps)
 		m_StandStill++;
@@ -33,13 +34,20 @@ void VacuumCleanerOperator::Draw(sf::RenderTarget& rt)const{
 	m_Cleaner.Draw(rt, Render::GetRainbowColor(m_Agent.CurrentGoal(), 7));
 }
 
-void VacuumCleanerOperator::Reset(sf::Vector2f position, float rotation) {
-	m_Cleaner.Position = position;
-	m_Cleaner.Rotation = rotation;
-	m_Agent.Reset();
+void VacuumCleanerOperator::DrawFitness(sf::RenderTarget& rt, const Environment& env)const{
+	Render::DrawStrings(m_Cleaner.Position, rt, {
+		std::to_string(m_Agent.FitnessFunction(m_Cleaner, env)),
+		std::to_string(m_Agent.CurrentDistanceToGoalNormalized())
+	});
 }
 
-size_t VacuumCleanerOperator::FitnessFunction(const Environment &env)const {
+void VacuumCleanerOperator::Reset(const Environment &env, sf::Vector2f position, float rotation) {
+	m_Cleaner.Position = position;
+	m_Cleaner.Rotation = rotation;
+	m_Agent.Reset(m_Cleaner, env);
+}
+
+float VacuumCleanerOperator::FitnessFunction(const Environment &env)const {
 	return m_Agent.FitnessFunction(m_Cleaner, env);
 }
 
@@ -55,17 +63,13 @@ size_t VacuumCleanerOperator::CurrentGoal()const {
 	return m_Agent.CurrentGoal();
 }
 
-float VacuumCleanerOperator::AvgNearestToGoal()const {
-	return m_Agent.AvgNearesstToGoal();
-}
-
 NeuralNetworkAgent& VacuumCleanerOperator::Agent() {
 	return m_Agent;
 }
 
 bool VacuumCleanerOperator::HasCrashed(const Environment &env)const {
 	for (const auto &wall : env.Walls) {
-		if(Math::LineCircleIntersection(sf::Vector2f(wall.Start), sf::Vector2f(wall.End), m_Cleaner.Position, m_Cleaner.Radius))
+		if(Math::LineCircleIntersection(sf::Vector2f(wall.Start), sf::Vector2f(wall.End), m_Cleaner.Position, CleanerRadius))
 			return true;
 	}
 	return false;
@@ -75,7 +79,7 @@ VacuumCleanerOperator VacuumCleanerOperator::Crossover(const VacuumCleanerOperat
 	return {NeuralNetworkAgent::Crossover(first.m_Agent, second.m_Agent)};
 }
 
-VacuumCleanerOperator VacuumCleanerOperator::Mutate(const VacuumCleanerOperator& agent, float rate) {
-	return {NeuralNetworkAgent::Mutate(agent.m_Agent, rate)};
+VacuumCleanerOperator VacuumCleanerOperator::Mutate(const VacuumCleanerOperator& agent, float chance, float range) {
+	return {NeuralNetworkAgent::Mutate(agent.m_Agent, chance, range)};
 }
 

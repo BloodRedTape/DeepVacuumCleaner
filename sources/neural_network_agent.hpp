@@ -8,14 +8,14 @@
 class NeuralNetworkAgent {
 	NeuralNetwork m_NN;
 	int m_CurrentGoal = 0;
-	std::vector<std::pair<float, size_t>> m_NearsetsToGoal;
-	
-	float m_DistanceFromStartToGoal = 0.f;
-
-	float m_AvgRotationDifference = 0.f;
-
 	bool m_HasEscaped = false;
 	size_t m_Iteration = 0;
+	float m_TotalDistanceTraveled = 0.f;
+
+	float m_InitialDistanceToGoal = 0.f;
+	float m_MaxDistanceToGoal = 0.f;
+	float m_MinDistanceToGoal = 0.f;
+	float m_CurrentDistanceToGoal = 0.f;
 public:
 
 	NeuralNetworkAgent(NeuralNetworkAgent &&) = default;
@@ -28,17 +28,23 @@ public:
 
 	NeuralNetworkAgent(int num_sensors);
 
+	void Reset(const VacuumCleaner &cleaner, const Environment &env);
+
+	void BeginGoal(size_t goal, const VacuumCleaner &cleaner, const Environment &env);
+
 	sf::Vector2f Iterate(const VacuumCleaner &cleaner, const Environment & env, size_t it);
 
 	size_t CurrentGoal()const;
 
-	void Reset(float rotation = 0);
+	bool HasNotTraveled()const;
 
-	bool HasEscaped()const;
+	bool TooFarGone()const {
+		return m_CurrentDistanceToGoal / m_InitialDistanceToGoal > 2;
+	}
 
-	float AvgNearesstToGoal()const;
-
-	size_t AvgFastestToGoal()const;
+	float CurrentDistanceToGoalNormalized()const{
+		return m_CurrentDistanceToGoal / m_InitialDistanceToGoal;	
+	}
 
 	float FitnessFunction(const VacuumCleaner &cleaner, const Environment& env)const;
 
@@ -48,5 +54,5 @@ public:
 
 	static NeuralNetworkAgent Crossover(const NeuralNetworkAgent& first, const NeuralNetworkAgent &second);
 
-	static NeuralNetworkAgent Mutate(const NeuralNetworkAgent& agent, float rate);
+	static NeuralNetworkAgent Mutate(const NeuralNetworkAgent& agent, float chance, float range);
 };

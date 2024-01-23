@@ -7,7 +7,6 @@
 #include <ostream>
 #include <istream>
 
-
 struct Wall {
 	sf::Vector2i Start;
 	sf::Vector2i End;
@@ -31,8 +30,6 @@ namespace Serialization {
 struct Environment {
 	std::vector<sf::Vector2i> Path;
 	std::vector<Wall> Walls;
-
-	static constexpr float WallHeight = 4.f;
 
 
 	bool IsFullfiled()const;

@@ -5,7 +5,7 @@ Application::Application(sf::Vector2i world_size):
 {}
 
 void Application::Run() {
-	m_Window.setFramerateLimit(60);
+	m_Window.setVerticalSyncEnabled(false);
 
 	sf::Clock cl;
 	while (m_Window.isOpen()) {
@@ -27,7 +27,10 @@ void Application::Run() {
 
 void Application::Tick(float dt) {	}
 
-void Application::OnEvent(const sf::Event& e) { }
+void Application::OnEvent(const sf::Event& e) {
+	if(e.type == sf::Event::Closed)
+		m_Window.close();
+}
 
 void Application::Render(sf::RenderTarget& rt) { }
 

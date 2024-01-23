@@ -15,6 +15,9 @@ class EvolutionTrainingApp: public ZoomMoveApplication{
 	using Super = ZoomMoveApplication;
 private:
 	EvolutionTraining m_Evo;
+
+	bool m_IsPaused = false;
+	bool m_IsDebug = false;
 public:
 	EvolutionTrainingApp(sf::Vector2i size, std::optional<std::string> filepath):
 		Super(size),
@@ -27,7 +30,10 @@ public:
 	virtual void Tick(float dt) override{
 		Super::Tick(dt);
 
-		int num_per_frame = 100;
+		if(m_IsPaused)
+			return;
+
+		int num_per_frame = 150;
 		for (int i = 0; i < num_per_frame; i++) {
 			m_Evo.Tick(dt / num_per_frame);
 		}
@@ -40,12 +46,20 @@ public:
 			m_Evo.SaveBest();
 			std::cout << "Saved\n";
 		}
+
+		if (e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::Key::Space) {
+			m_IsPaused = !m_IsPaused;
+		}
+
+		if (e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::Key::D) {
+			m_IsDebug = !m_IsDebug;
+		}
 	}
 
 	virtual void Render(sf::RenderTarget& rt) override{
 		Super::Render(rt);
 
-		m_Evo.Draw(rt);
+		m_Evo.Draw(rt, m_IsDebug);
 	}
 };
 
@@ -58,10 +72,10 @@ public:
 	EvolutionDemoApp(sf::Vector2i size):
 		Super(size)
 	{
-		m_Cleaner.Agent().LoadFromFile("best8/0.bin");
-		m_Env.LoadFromFile("test.map");
-		m_Window.setFramerateLimit(60);
-		m_View.zoom(2);
+		m_Cleaner.Agent().LoadFromFile("best6/0.bin");
+		m_Env.LoadFromFile("race.map");
+		m_Window.setFramerateLimit(120);
+		m_View.zoom(3);
 	}
 
 	virtual void Tick(float dt) override{
@@ -85,14 +99,14 @@ std::unique_ptr<Application> MakeApp(sf::Vector2i size) {
 
 template<>
 std::unique_ptr<Application> MakeApp<EvolutionTrainingApp>(sf::Vector2i size) {
-	return std::make_unique<EvolutionTrainingApp>(size, std::optional<std::string>{"best7"});
+	return std::make_unique<EvolutionTrainingApp>(size, std::optional<std::string>{"best4"});
 }
 
 int main()
 {
 	srand(time(0));
 	
-	MakeApp<EvolutionTrainingApp>({1920, 1080})->Run();
+	MakeApp<MapEditor>({1720, 1080})->Run();
 	
 	return 0;
 }

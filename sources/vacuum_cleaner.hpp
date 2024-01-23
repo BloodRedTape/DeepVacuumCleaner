@@ -17,11 +17,6 @@ struct VacuumCleaner {
 
 	std::vector<Sensor> Sensors;
 
-	static constexpr float Radius = 60.f;
-
-	static constexpr float RayLength = 40;
-
-
 	VacuumCleaner();
 
 	void Move(float forward, float rotate);

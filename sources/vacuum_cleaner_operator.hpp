@@ -9,7 +9,6 @@ class VacuumCleanerOperator {
 
 	size_t m_StandStill = 0;
 	size_t m_NumberFailure = 0;
-	static constexpr float Eps = 0.001;
 public:
 
 	VacuumCleanerOperator() = default;
@@ -26,9 +25,11 @@ public:
 
 	void Draw(sf::RenderTarget& rt)const;
 
-	void Reset(sf::Vector2f position, float rotation = 0);
+	void DrawFitness(sf::RenderTarget& rt, const Environment &env)const;
 
-	size_t FitnessFunction(const Environment &env)const;
+	void Reset(const Environment &env, sf::Vector2f position, float rotation = 0);
+
+	float FitnessFunction(const Environment &env)const;
 
 	size_t StandStill()const;
 
@@ -36,13 +37,11 @@ public:
 	
 	size_t CurrentGoal()const;
 
-	float AvgNearestToGoal()const;
-
 	NeuralNetworkAgent& Agent();
 
 	bool HasCrashed(const Environment &env)const;
 
 	static VacuumCleanerOperator Crossover(const VacuumCleanerOperator& first, const VacuumCleanerOperator &second);
 
-	static VacuumCleanerOperator Mutate(const VacuumCleanerOperator& agent, float rate);
+	static VacuumCleanerOperator Mutate(const VacuumCleanerOperator& agent, float chance, float range);
 };

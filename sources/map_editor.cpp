@@ -1,5 +1,6 @@
 #include "map_editor.hpp"
 #include "render.hpp"
+#include "config.hpp"
 
 
 MapEditor::MapEditor(sf::Vector2i world_size):
@@ -42,7 +43,7 @@ void MapEditor::Render(sf::RenderTarget& rt) {
 
 	if (m_WallBegin.has_value()) {
 		auto point = sf::Vector2i(m_Window.mapPixelToCoords(sf::Vector2i(MousePosition())));
-		Render::DrawLine(sf::Vector2f(m_WallBegin.value()), sf::Vector2f(point), Environment::WallHeight, rt);
+		Render::DrawLine(sf::Vector2f(m_WallBegin.value()), sf::Vector2f(point), WallHeight, rt);
 	}
 
 	m_Cleaner.Draw(rt);

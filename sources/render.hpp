@@ -30,6 +30,11 @@ namespace Render{
 		rt.draw(text);
 	}
 
+	inline void DrawStrings(sf::Vector2f position, sf::RenderTarget& rt, std::initializer_list<std::string> strings) {
+        for (int i = 0; i < strings.size(); i++)
+            DrawString(position + sf::Vector2f(0, i * 40), strings.begin()[i], rt);
+	}
+
 	
 inline sf::Color hsvToRgb(float h, float s, float v) {
     if (s <= 0.0f) {

@@ -4,6 +4,7 @@
 #include "render.hpp"
 #include <fstream>
 #include <SFML/Graphics.hpp>
+#include "config.hpp"
 
 float Wall::TraceNearestObstacle(sf::Vector2f position, sf::Vector2f direction, const std::vector<Wall> &walls){
 	std::optional<float> nearest;
@@ -31,7 +32,6 @@ bool Environment::IsFullfiled()const {
 void Environment::Draw(sf::RenderTarget& rt) {
 	for (int i = 0; i<Path.size(); i++) {
 		auto point = Path[i];
-		constexpr float PointRadius = 5.f;
 		sf::CircleShape shape(PointRadius);
 		shape.setPosition((sf::Vector2f)point);
 		shape.setOrigin({PointRadius, PointRadius});

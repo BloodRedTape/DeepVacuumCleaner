@@ -41,7 +41,7 @@ public:
 
 	static Layer Crossover(const Layer& parent1, const Layer& parent2);
 
-	static Layer MutateLayer(const Layer& layer, float mutationRate);
+	static Layer MutateLayer(const Layer& layer, float chance, float range);
 };
 
 class NeuralNetwork {
@@ -63,7 +63,7 @@ public:
 
 	static NeuralNetwork Crossover(const NeuralNetwork& parent1, const NeuralNetwork& parent2);
 
-	static NeuralNetwork MutateNetwork(const NeuralNetwork& network, float mutationRate);
+	static NeuralNetwork MutateNetwork(const NeuralNetwork& network, float chance, float range);
 
 	const std::vector<Layer>& Layers()const;
 

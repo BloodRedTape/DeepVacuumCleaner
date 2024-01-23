@@ -3,11 +3,12 @@
 #include "render.hpp"
 #include "random.hpp"
 #include "math.hpp"
+#include "config.hpp"
 
 EvolutionTraining::EvolutionTraining(std::optional<std::string> filepath) {
 	m_Env.LoadFromFile("test.map");
 
-	if (filepath.has_value()) {
+	if (filepath.has_value() && std::filesystem::exists(filepath.value())) {
 
 		for (int i = 0; ; i++) {
 			std::string path = filepath.value() + "/" + std::to_string(i) + ".bin";
@@ -25,6 +26,10 @@ EvolutionTraining::EvolutionTraining(std::optional<std::string> filepath) {
 			m_Population.push_back({});
 		}
 	}
+
+	for (auto& p : m_Population) {
+		p.Reset(m_Env, m_StartingPosition);
+	}
 }
 
 void EvolutionTraining::Tick(float dt) {
@@ -37,7 +42,7 @@ void EvolutionTraining::Tick(float dt) {
 
 		agent.Iterate(m_Env, dt, m_IterationsNumber);
 
-		if(agent.StandStill() > StandStillToDie || agent.NumberFailure() || agent.HasCrashed(m_Env) || agent.Agent().HasEscaped())
+		if(agent.StandStill() > StandStillToDie || agent.NumberFailure() || agent.HasCrashed(m_Env) || agent.Agent().HasNotTraveled())
 			die.push_back(i);
 	}
 
@@ -47,6 +52,9 @@ void EvolutionTraining::Tick(float dt) {
 	}
 
 	for (int i = die.size() - 1; i>=0; i--) {
+		if(m_Population.size() <= 2)
+			break;
+
 		int index = die[i];
 		std::swap(m_Population[index], m_Population.back());
 		m_Population.pop_back();
@@ -71,8 +79,6 @@ void EvolutionTraining::NextGeneration() {
 		SaveBest();
 	}
 
-	std::cout << "New Generation: " << m_Generation << "\n";
-
 	std::sort(m_Population.begin(), m_Population.end(), [&](auto &left, auto &right) {
 		return left.FitnessFunction(m_Env) > right.FitnessFunction(m_Env);
 	});
@@ -83,9 +89,16 @@ void EvolutionTraining::NextGeneration() {
 		SaveBest();
 	}
 
+	assert(m_Population[0].FitnessFunction(m_Env) >= m_Population[1].FitnessFunction(m_Env));
+
 	auto new_population = PopulationFromSorted(m_Population);
 
+	std::cout << "New Generation: " << m_Generation << " size " << new_population.size() << " from " << m_Population.size() << "\n";
+
 	m_Population = std::move(new_population);
+
+	for (auto& p : m_Population)
+		p.Reset(m_Env, m_StartingPosition);
 }
 
 std::vector<VacuumCleanerOperator> EvolutionTraining::PopulationFromSorted(const std::vector<VacuumCleanerOperator> &population) {
@@ -99,24 +112,36 @@ std::vector<VacuumCleanerOperator> EvolutionTraining::PopulationFromSorted(const
 	}
 
 	for (auto& op : new_population) {
-		if (GetRandom<float>(0, 1) > 0.2)
-			op = VacuumCleanerOperator::Mutate(op, Rate);
-		op.Reset(m_StartingPosition);
+		if (GetRandom<float>(0, 1) < GenofondMutationChance)
+			op = VacuumCleanerOperator::Mutate(op, MutationChance, MutationRange);
+		op.Reset(m_Env, m_StartingPosition);
 	}
-	
+
 	for(int i = 0; i<count; i++){
 		new_population.push_back(population[i]);
-		new_population.back().Reset(m_StartingPosition);
+	}
+
+	for (int i = 0; i < RandomCrossovers; i++) {
+		new_population.push_back(VacuumCleanerOperator::Crossover({}, new_population[rand() % new_population.size()]));
+	}
+
+	for (int i = 0; i < std::min(BestModelsToMutate, population.size()); i++) {
+		for(int j = 0; j<BestModelsMutateTimes; j++){
+			new_population.push_back(VacuumCleanerOperator::Mutate(population[i], BestModelsToMutationChance, BestModelsToMutationRange));
+		}
 	}
 	
 	return new_population;
 }
 
-void EvolutionTraining::Draw(sf::RenderTarget& rt) {
+void EvolutionTraining::Draw(sf::RenderTarget& rt, bool debug) {
 	m_Env.Draw(rt);
 
 	for (const auto& agent : m_Population) {
 		agent.Draw(rt);
+
+		if(debug)
+			agent.DrawFitness(rt, m_Env);
 	}
 	
 	rt.setView(rt.getDefaultView());
@@ -125,10 +150,28 @@ void EvolutionTraining::Draw(sf::RenderTarget& rt) {
 }
 
 void EvolutionTraining::DrawUI(sf::RenderTarget& rt) {
-	Render::DrawString({0, 00}, "Alive: " + std::to_string(m_Population.size()), rt);
-	Render::DrawString({0, 40}, "Generation: " + std::to_string(m_Generation), rt);
-	Render::DrawString({0, 80}, "Iterations: " + std::to_string(m_IterationsNumber), rt);
-	Render::DrawString({0, 120}, "HighestGoal: " + std::to_string(m_HighestGoal), rt);
+	Render::DrawStrings({0, 0}, rt, {
+		"Alive: " + std::to_string(m_Population.size()),
+		"Generation: " + std::to_string(m_Generation),
+		"Iterations: " + std::to_string(m_IterationsNumber),
+		"HighestGoal: " + std::to_string(m_HighestGoal),
+		"HighestFitness: " + std::to_string(m_HighestFitness)
+	});
+
+	auto highest_goal = [](auto &l, auto &r){
+		return l.CurrentGoal() < r.CurrentGoal();
+	};
+#if 0
+	if(!m_Population.size())
+		return;
+	auto best = std::max_element(m_Population.begin(), m_Population.end(), highest_goal);
+
+	Render::DrawStrings({ 0, 180 }, rt, {
+		"BestGuy ",
+		"GoalIndex " + std::to_string(best->CurrentGoal()),
+		"Fitness " + std::to_string(best->FitnessFunction(m_Env))
+	});
+#endif
 }
 
 void EvolutionTraining::SaveBest() {
@@ -136,7 +179,7 @@ void EvolutionTraining::SaveBest() {
 		return left.FitnessFunction(m_Env) > right.FitnessFunction(m_Env);
 	});
 
-	for (int i = 0; i < std::min(ModelsToCrossover, m_Population.size()); i++) {
+	for (int i = 0; i < std::min(ModelsToSave, m_Population.size()); i++) {
 		m_Population.front().Agent().SaveToFile(MakePath(m_HighestGoal, i));
 	}
 

@@ -221,27 +221,37 @@ bool operator==(const Matrix<Type>& lhs, const Matrix<Type>& rhs) {
     return true;
 }
 
-namespace Serialization{
-	template<typename T>
-	inline void ToStream(const Matrix<T> &matrix, std::ostream& stream){
-		size_t n = matrix.N();
-		size_t m = matrix.M();
-		stream.write((char*)&n, sizeof(n));
-		stream.write((char*)&m, sizeof(m));
-		stream.write((char*)matrix.Data(), sizeof(T) * matrix.Count());
+template<typename T>
+struct Serializer<Matrix<T>>{
+
+	static void ToStream(const Matrix<T> &matrix, std::ostream& stream){
+		Serializer<std::size_t>::ToStream(matrix.N(), stream);
+		Serializer<std::size_t>::ToStream(matrix.M(), stream);
+
+		for (auto i = 0; i < matrix.Count(); i++)
+			Serializer<T>::ToStream(matrix.Data()[i], stream);
 	}
 
-	template<typename T>
-	inline Matrix<T> FromStreamImpl(std::istream& stream, Matrix<T>*) {
-		size_t n, m;
+	static std::optional<Matrix<T>> FromStream(std::istream& stream) {
 
-		stream.read((char*)&n, sizeof(n));
-		stream.read((char*)&m, sizeof(m));
+		auto n = Serializer<std::size_t>::FromStream(stream);
+		auto m = Serializer<std::size_t>::FromStream(stream);
 
-		Matrix<T> matrix(n, m);
+		if(!n.has_value() || !m.has_value())
+			return std::nullopt;
 
-		stream.read((char*)matrix.Data(), sizeof(T) * matrix.Count());
+		Matrix<T> matrix(n.value(), m.value());
+		
+		for (auto i = 0; i < matrix.Count(); i++){
+			auto e = Serializer<T>::FromStream(stream);
 
-		return matrix;
+			if(!e.has_value())
+				return std::nullopt;
+
+			matrix.Data()[i] = std::move(e.value());
+		}
+		
+		return {std::move(matrix)};
 	}
-}
+
+};

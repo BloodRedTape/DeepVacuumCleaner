@@ -1,5 +1,6 @@
 #include "map_editor.hpp"
 #include "render.hpp"
+#include "imgui.h"
 
 
 MapEditor::MapEditor(sf::Vector2i world_size):
@@ -33,6 +34,16 @@ void MapEditor::Tick(float dt) {
 
 	m_Cleaner.Move(forward * 90, rotate * 60);
 }
+void MapEditor::OnImGui() {
+	Super::OnImGui();
+
+	ImGui::Begin("Map Editor");
+
+	ImGui::Text("Walls: %d", m_Env.Walls.size());
+	ImGui::Text("Points: %d", m_Env.Path.size());
+
+	ImGui::End();
+}
 
 void MapEditor::Render(sf::RenderTarget& rt) {
 	Super::Render(rt);
@@ -52,31 +63,31 @@ void MapEditor::Render(sf::RenderTarget& rt) {
 void MapEditor::OnEvent(const sf::Event& e){
 	Super::OnEvent(e);
 
-	if (e.type == sf::Event::MouseButtonPressed){
-		auto point = sf::Vector2i(m_Window.mapPixelToCoords({e.mouseButton.x, e.mouseButton.y}));
+	if (const auto* mouse = e.getIf<sf::Event::MouseButtonPressed>()) {
+		auto point = sf::Vector2i(m_Window.mapPixelToCoords({mouse->position.x, mouse->position.y}));
 		
-		if(e.mouseButton.button == sf::Mouse::Button::Left){
+		if(mouse->button == sf::Mouse::Button::Left){
 
 			if(std::find(m_Env.Path.begin(), m_Env.Path.end(), point) == m_Env.Path.end())
 				m_Env.Path.push_back(point);
 		}
 
-		if(e.mouseButton.button == sf::Mouse::Button::Right){
+		if(mouse->button == sf::Mouse::Button::Right){
 			m_WallBegin = point;
 		}
 	}
 
-	if (e.type == sf::Event::MouseButtonReleased){
-		auto point = sf::Vector2i(m_Window.mapPixelToCoords({e.mouseButton.x, e.mouseButton.y}));
+	if (const auto *mouse = e.getIf<sf::Event::MouseButtonReleased>()){
+		auto point = sf::Vector2i(m_Window.mapPixelToCoords({mouse->position.x, mouse->position.y}));
 
-		if(e.mouseButton.button == sf::Mouse::Button::Right){
+		if(mouse->button == sf::Mouse::Button::Right){
 			m_Env.Walls.push_back({m_WallBegin.value(), point});
 			m_WallBegin.reset();
 		}
 	}
 
-	if (e.type == sf::Event::KeyPressed) {
-		if (e.key.code == sf::Keyboard::Key::S && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl)) {
+	if (const auto *key = e.getIf<sf::Event::KeyPressed>()) {
+		if (key->code == sf::Keyboard::Key::S && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl)) {
 			OnSave();
 		}
 	}

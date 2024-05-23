@@ -50,9 +50,9 @@ void Environment::SaveToFile(const std::string& filename) {
 	std::fstream file(filename, std::ios::binary | std::ios::out);
 
 	assert(file.is_open());
-
-	Serialization::ToStream(Path, file);
-	Serialization::ToStream(Walls, file);
+	
+	Serializer<std::vector<sf::Vector2i>>::ToStream(Path, file);
+	Serializer<std::vector<Wall>>::ToStream(Walls, file);
 }
 
 void Environment::LoadFromFile(const std::string& filename) {
@@ -60,6 +60,12 @@ void Environment::LoadFromFile(const std::string& filename) {
 
 	assert(file.is_open());
 
-	Path = Serialization::FromStream<std::vector<sf::Vector2i>>(file);
-	Walls = Serialization::FromStream<std::vector<Wall>>(file);
+	auto path = Serializer<std::vector<sf::Vector2i>>::FromStream(file);
+	auto walls = Serializer<std::vector<Wall>>::FromStream(file);
+
+	if(!path.has_value() || !walls.has_value())
+		return;
+
+	Path = std::move(path.value());
+	Walls = std::move(walls.value());
 }

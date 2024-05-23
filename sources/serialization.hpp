@@ -3,82 +3,88 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <optional>
 #include <SFML/System/Vector2.hpp>
 
-namespace Serialization{
-	
-	inline void ToStream(float e, std::ostream& stream) {
-		stream.write((char*)&e, sizeof(e));
+template<typename T>
+struct RawSerializer {
+	static_assert(!std::is_pointer_v<T>, "Can't raw-serialize pointers");
+
+	static void ToStream(const T& object, std::ostream& stream) {
+		stream.write((const char*)std::addressof(object), sizeof(object));
 	}
 
-	template<typename T>
-	inline T FromStream(std::istream& stream) {
-		return FromStreamImpl(stream, (T*)nullptr);
+	static std::optional<T> FromStream(std::istream& stream) {
+		T object;
+
+		if (!stream.read((char*)std::addressof(object), sizeof(object)))
+			return std::nullopt;
+
+		return { std::move(object) };
+	}
+};
+
+template<typename T>
+struct Serializer {
+	static void ToStream(const T& object, std::ostream& stream) { 
+		RawSerializer<T>::ToStream(object, stream); 
 	}
 
-	inline float FromStreamImpl(std::istream& stream, float*) {
-		float f;
-		stream.read((char*)&f, sizeof(f));
-		return f;
+	static std::optional<T> FromStream(std::istream& stream) { 
+		return RawSerializer<T>::FromStream(stream);
 	}
+};
 
-	inline void ToStream(int e, std::ostream& stream) {
-		stream.write((char*)&e, sizeof(e));
-	}
-
-	inline int FromStreamImpl(std::istream& stream, int*) {
-		int f;
-		stream.read((char*)&f, sizeof(f));
-		return f;
-	}
-
-	inline void ToStream(const std::string &string, std::ostream& stream) {
-		size_t s = string.size();
-		stream.write((char*)&s, sizeof(s));
+template<>
+struct Serializer<std::string>{
+	static void ToStream(const std::string& string, std::ostream& stream) {
+		Serializer<std::size_t>::ToStream(string.size(), stream);
 		stream.write(string.data(), string.size());
 	}
 
-	inline std::string FromStreamImpl(std::istream& stream, std::string*) {
-		size_t s;
+	static std::optional<std::string> FromStream(std::istream& stream) {
+		auto size = Serializer<std::size_t>::FromStream(stream);
 
-		stream.read((char*)&s, sizeof(s));
-		std::string string(s, '\0');
-		stream.read(string.data(), string.size());
-		return string;
+		if(!size.has_value())
+			return std::nullopt;
+
+		std::string string(size.value(), '\0');
+
+		if(!stream.read(string.data(), string.size()))
+			return std::nullopt;
+
+		return {std::move(string)};
 	}
-	
-	template<typename T>
-	inline void ToStream(const std::vector<T>& vector, std::ostream& stream) {
-		size_t size = vector.size();
-		stream.write((char*)&size, sizeof(size));
+};
 
-		for (const auto &e : vector) {
-			ToStream(e, stream);
-		}
+template<typename T>
+struct Serializer<std::vector<T>>{
+
+	static void ToStream(const std::vector<T>& vector, std::ostream& stream) {
+		Serializer<std::size_t>::ToStream(vector.size(), stream);
+
+		for (const auto &e : vector)
+			Serializer<T>::ToStream(e, stream);
 	}
 
-	template<typename T>
-	inline std::vector<T> FromStreamImpl(std::istream& stream, std::vector<T>*) {
-		size_t size;
-		stream.read((char*)&size, sizeof(size));
+	static std::optional<std::vector<T>> FromStream(std::istream& stream) {
+		auto size = Serializer<std::size_t>::FromStream(stream);
+
+		if(!size.has_value())
+			return std::nullopt;
 
 		std::vector<T> vector;
 		
-		for(int i = 0; i<size; i++){
-			auto e = FromStream<T>(stream);
-			vector.emplace_back(std::move(e));
+		for(int i = 0; i<size.value(); i++) {
+			auto e = Serializer<T>::FromStream(stream);
+
+			if(!e.has_value())
+				return std::nullopt;
+
+			vector.emplace_back(std::move(e.value()));
 		}
 
-		return vector;
+		return {std::move(vector)};
 	}
 
-	inline void ToStream(sf::Vector2i vector, std::ostream& stream) {
-		stream.write((char*)&vector, sizeof(vector));
-	}
-
-	inline sf::Vector2i FromStreamImpl(std::istream& stream, sf::Vector2i*) {
-		sf::Vector2i f;
-		stream.read((char*)&f, sizeof(f));
-		return f;
-	}
-}
+};

@@ -133,7 +133,7 @@ void NeuralNetworkAgent::SaveToFile(const std::string& filename) {
 
 	assert(file.is_open());
 
-	Serialization::ToStream(m_NN, file);
+	Serializer<NeuralNetwork>::ToStream(m_NN, file);
 }
 
 void NeuralNetworkAgent::LoadFromFile(const std::string& filename) {
@@ -141,7 +141,12 @@ void NeuralNetworkAgent::LoadFromFile(const std::string& filename) {
 
 	assert(file.is_open());
 
-	m_NN = Serialization::FromStream<NeuralNetwork>(file);
+	auto nn = Serializer<NeuralNetwork>::FromStream(file);
+
+	if(!nn.has_value())
+		return;
+
+	m_NN = std::move(nn.value());
 }
 
 NeuralNetworkAgent NeuralNetworkAgent::Crossover(const NeuralNetworkAgent& first, const NeuralNetworkAgent &second) {

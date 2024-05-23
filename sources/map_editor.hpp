@@ -19,6 +19,8 @@ public:
 
 	void Tick(float dt)override;
 
+	void OnImGui()override;
+
 	void Render(sf::RenderTarget& rt)override;
 
 	void OnEvent(const sf::Event& e)override;

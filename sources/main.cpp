@@ -36,9 +36,11 @@ public:
 	virtual void OnEvent(const sf::Event& e) override{ 
 		Super::OnEvent(e);
 
-		if(e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::Key::S && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl)){
-			m_Evo.SaveBest();
-			std::cout << "Saved\n";
+		if(const auto *key = e.getIf<sf::Event::KeyPressed>()){
+			if(key->code == sf::Keyboard::Key::S && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl)) {
+				m_Evo.SaveBest();
+				std::cout << "Saved\n";
+			}
 		}
 	}
 
@@ -92,7 +94,7 @@ int main()
 {
 	srand(time(0));
 	
-	MakeApp<EvolutionTrainingApp>({1920, 1080})->Run();
+	MakeApp<MapEditor>({1920, 1080})->Run();
 	
 	return 0;
 }

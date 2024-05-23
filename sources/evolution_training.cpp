@@ -5,7 +5,7 @@
 #include "math.hpp"
 
 EvolutionTraining::EvolutionTraining(std::optional<std::string> filepath) {
-	m_Env.LoadFromFile("test.map");
+	//m_Env.LoadFromFile("test.map");
 
 	if (filepath.has_value()) {
 

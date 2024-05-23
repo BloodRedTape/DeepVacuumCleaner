@@ -5,6 +5,7 @@ cmake_policy(SET CMP0091 NEW)
 project ("DeepVacuumCleaner")
 
 add_subdirectory(libs/sfml)
+add_subdirectory(libs/bsl)
 find_package(imgui REQUIRED)
 find_package(freetype REQUIRED)
 
@@ -27,5 +28,5 @@ add_executable (DeepVacuumCleaner
 	"sources/evolution_training.cpp"
 )
 
-target_link_libraries(DeepVacuumCleaner ImGui-SFML)
+target_link_libraries(DeepVacuumCleaner ImGui-SFML bsl)
 

@@ -9,7 +9,8 @@
 #include "evolution_training.hpp"
 #include <iostream>
 #include <sstream>
-
+#include <filesystem>
+#include <bsl/file.hpp>
 
 class EvolutionTrainingApp: public ZoomMoveApplication{
 	using Super = ZoomMoveApplication;
@@ -93,6 +94,10 @@ std::unique_ptr<Application> MakeApp<EvolutionTrainingApp>(sf::Vector2i size) {
 int main()
 {
 	srand(time(0));
+
+	std::filesystem::current_path("../../../run_tree");
+
+	WriteEntireFile("test/file.txt", "Hello");
 	
 	MakeApp<MapEditor>({1920, 1080})->Run();
 	

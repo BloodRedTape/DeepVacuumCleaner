@@ -11,7 +11,7 @@ void VacuumCleanerOperator::Iterate(const Environment &env, float dt, size_t it_
 
 	bool UseDeltaTime = false;
 	auto it = m_Agent.Iterate(m_Cleaner, env, it_num);
-	auto [forward, rotation] = UseDeltaTime ? it.cwiseMul(sf::Vector2f(60, 60)) * dt : it;
+	auto [forward, rotation] = it.cwiseMul(sf::Vector2f(60, 60)) * (UseDeltaTime ? dt : 0.016f);
 
 	if(std::abs(forward) < Eps && std::abs(rotation) < Eps)
 		m_StandStill++;

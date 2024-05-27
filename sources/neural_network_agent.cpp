@@ -28,8 +28,7 @@ sf::Vector2f NeuralNetworkAgent::Iterate(const VacuumCleaner &cleaner, const Env
 
 	auto direction = goal - cleaner.Position;
 	
-	float desired_rotation = (direction.angle() - cleaner.Direction().angle()).asDegrees();
-
+	float difference_with_goal = acos(direction.normalized().dot(cleaner.Direction().normalized())) / 3.14 * 180;
 		
 	Matrix<float> input(1, cleaner.Sensors.size() + 3);
 
@@ -42,8 +41,8 @@ sf::Vector2f NeuralNetworkAgent::Iterate(const VacuumCleaner &cleaner, const Env
 		input[0][i] = Wall::TraceNearestObstacle(start, direction, env.Walls);
 	}
 
-	input[0][cleaner.Sensors.size()    ] = cleaner.Rotation;
-	input[0][cleaner.Sensors.size() + 1] = desired_rotation;
+	input[0][cleaner.Sensors.size()    ] = 0.f;//cleaner.Rotation;
+	input[0][cleaner.Sensors.size() + 1] = difference_with_goal;
 	input[0][cleaner.Sensors.size() + 2] = direction.length();
 
 	auto output = m_NN.Do(input);

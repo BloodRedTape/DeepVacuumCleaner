@@ -3,9 +3,10 @@
 #include "render.hpp"
 #include "random.hpp"
 #include "math.hpp"
+#include "bsl/format.hpp"
 
 EvolutionTraining::EvolutionTraining(std::optional<std::string> filepath) {
-	//m_Env.LoadFromFile("test.map");
+	m_Env.LoadFromFile("room1.map");
 
 	if (filepath.has_value()) {
 
@@ -65,27 +66,40 @@ void EvolutionTraining::NextGeneration() {
 	auto h = std::max_element(m_Population.begin(), m_Population.end(), [](auto &l, auto &r){
 		return l.CurrentGoal() < r.CurrentGoal();
 	})->CurrentGoal();
+	
+	Println("New Population");
+	Println("BestOfEachGoal: %", m_BestOfEachGoal.size());
+
+	SortPopulation();
+	auto best_fitness = m_Population.front().FitnessFunction(m_Env);
+
+	if(best_fitness > m_HighestFitness || h > m_HighestGoal){
+		m_BestOfEachGoal.push_back(m_Population.front());
+	}
 
 	if(h > m_HighestGoal){
 		m_HighestGoal = h;
 		SaveBest();
 	}
 
-	std::cout << "New Generation: " << m_Generation << "\n";
-
-	std::sort(m_Population.begin(), m_Population.end(), [&](auto &left, auto &right) {
-		return left.FitnessFunction(m_Env) > right.FitnessFunction(m_Env);
-	});
-
-	auto best_fitness = m_Population.front().FitnessFunction(m_Env);
 	if (best_fitness > m_HighestFitness) {
 		m_HighestFitness = best_fitness;
 		SaveBest();
 	}
+	
+	std::copy(m_BestOfEachGoal.begin(), m_BestOfEachGoal.end(), std::back_inserter(m_Population));
+
+	SortPopulation();
 
 	auto new_population = PopulationFromSorted(m_Population);
 
 	m_Population = std::move(new_population);
+}
+
+void EvolutionTraining::SortPopulation() {
+	std::sort(m_Population.begin(), m_Population.end(), [&](auto &left, auto &right) {
+		return left.FitnessFunction(m_Env) > right.FitnessFunction(m_Env);
+	});
 }
 
 std::vector<VacuumCleanerOperator> EvolutionTraining::PopulationFromSorted(const std::vector<VacuumCleanerOperator> &population) {

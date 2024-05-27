@@ -4,6 +4,7 @@
 
 class EvolutionTraining {
 	std::vector<VacuumCleanerOperator> m_Population;
+	std::vector<VacuumCleanerOperator> m_BestOfEachGoal;
 	Environment m_Env;
 
 	sf::Vector2f m_StartingPosition{0, 0};
@@ -28,6 +29,8 @@ public:
 	void NextGeneration();
 
 	std::vector<VacuumCleanerOperator> PopulationFromSorted(const std::vector<VacuumCleanerOperator> &population);
+
+	void SortPopulation();
 
 	void Draw(sf::RenderTarget& rt);
 

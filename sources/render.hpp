@@ -30,6 +30,13 @@ namespace Render{
 		rt.draw(text);
 	}
 
+    inline void DrawCircle(sf::Vector2f position, float radius, sf::RenderTarget& rt, sf::Color color = sf::Color::White) {
+		sf::CircleShape shape(radius);
+		shape.setPosition((sf::Vector2f)position);
+		shape.setOrigin({radius, radius});
+		rt.draw(shape);
+    }
+
 	
 inline sf::Color hsvToRgb(float h, float s, float v) {
     if (s <= 0.0f) {

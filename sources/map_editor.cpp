@@ -42,13 +42,26 @@ void MapEditor::OnImGui() {
 	ImGui::Text("Walls: %d", m_Env.Walls.size());
 	ImGui::Text("Points: %d", m_Env.Path.size());
 
+	ImGui::Checkbox("Draw Bounds", &m_DrawBounds);
+	ImGui::Checkbox("Draw Grid Decomposition", &m_DrawGridDecomposition);
+	ImGui::Checkbox("Draw Path Numbers", &m_DrawNumbers);
+	ImGui::InputInt2("Grid Cell Size", &m_GridCellSize.x);
+
+	if (ImGui::Button("Rebuild")) {
+		m_Env.AutogeneratePath(m_GridCellSize, m_StartPosition);
+	}
+
 	ImGui::End();
 }
 
 void MapEditor::Render(sf::RenderTarget& rt) {
 	Super::Render(rt);
-
-	m_Env.Draw(rt);
+	
+	if(m_DrawBounds)
+		m_Env.DrawBounds(rt);
+	if(m_DrawGridDecomposition)
+		m_Env.Grid.Draw(rt);
+	m_Env.Draw(rt, m_DrawNumbers);
 
 
 	if (m_WallBegin.has_value()) {
@@ -63,26 +76,28 @@ void MapEditor::Render(sf::RenderTarget& rt) {
 void MapEditor::OnEvent(const sf::Event& e){
 	Super::OnEvent(e);
 
-	if (const auto* mouse = e.getIf<sf::Event::MouseButtonPressed>()) {
-		auto point = sf::Vector2i(m_Window.mapPixelToCoords({mouse->position.x, mouse->position.y}));
+	if(!ImGui::GetIO().WantCaptureMouse){
+		if (const auto* mouse = e.getIf<sf::Event::MouseButtonPressed>()) {
+			auto point = sf::Vector2i(m_Window.mapPixelToCoords({mouse->position.x, mouse->position.y}));
 		
-		if(mouse->button == sf::Mouse::Button::Left){
+			if(mouse->button == sf::Mouse::Button::Left){
 
-			if(std::find(m_Env.Path.begin(), m_Env.Path.end(), point) == m_Env.Path.end())
-				m_Env.Path.push_back(point);
+				if(std::find(m_Env.Path.begin(), m_Env.Path.end(), point) == m_Env.Path.end())
+					m_Env.Path.push_back(point);
+			}
+
+			if(mouse->button == sf::Mouse::Button::Right){
+				m_WallBegin = point;
+			}
 		}
 
-		if(mouse->button == sf::Mouse::Button::Right){
-			m_WallBegin = point;
-		}
-	}
+		if (const auto *mouse = e.getIf<sf::Event::MouseButtonReleased>()){
+			auto point = sf::Vector2i(m_Window.mapPixelToCoords({mouse->position.x, mouse->position.y}));
 
-	if (const auto *mouse = e.getIf<sf::Event::MouseButtonReleased>()){
-		auto point = sf::Vector2i(m_Window.mapPixelToCoords({mouse->position.x, mouse->position.y}));
-
-		if(mouse->button == sf::Mouse::Button::Right){
-			m_Env.Walls.push_back({m_WallBegin.value(), point});
-			m_WallBegin.reset();
+			if(mouse->button == sf::Mouse::Button::Right){
+				m_Env.Walls.push_back({m_WallBegin.value(), point});
+				m_WallBegin.reset();
+			}
 		}
 	}
 

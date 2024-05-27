@@ -13,6 +13,13 @@ private:
 
 	Environment m_Env;
 	VacuumCleaner m_Cleaner;
+
+	bool m_DrawBounds = true;
+	bool m_DrawGridDecomposition = true;
+	bool m_DrawNumbers = false;
+
+	sf::Vector2i m_GridCellSize = {20, 20};
+	sf::Vector2i m_StartPosition = {50, 50};
 public:
 
 	MapEditor(sf::Vector2i world_size);

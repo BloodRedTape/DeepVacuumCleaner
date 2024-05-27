@@ -27,16 +27,49 @@ namespace Serialization {
 	}
 }
 
+
+struct GridDecomposition {
+	std::vector<sf::Vector2i> OccupiedIndices;
+	sf::IntRect Bounds;
+	sf::Vector2i CellSize;
+
+	void Draw(sf::RenderTarget& rt);
+
+	std::vector<sf::Vector2i> BuildPath(sf::Vector2i start_position)const;
+
+	sf::IntRect GetCellByIndex(sf::Vector2i index)const;
+
+	sf::Vector2i PositionToCellIndex(sf::Vector2i position)const;
+
+	sf::Vector2i CellIndexToMiddlePosition(sf::Vector2i cell_index)const;
+
+	bool IsOccupied(sf::Vector2i cell_index)const;
+
+	sf::Vector2i CellsCount()const;
+
+	static GridDecomposition Make(sf::Vector2i cell_size, sf::IntRect bounds, const std::vector<Wall> &walls);
+};
+
 struct Environment {
 	std::vector<sf::Vector2i> Path;
 	std::vector<Wall> Walls;
+	sf::Vector2i StartPosition;
+	
+	GridDecomposition Grid;
 
+	static constexpr float WallHeight = 4.f;
 
 	bool IsFullfiled()const;
 
-	void Draw(sf::RenderTarget& rt);
+	void DrawBounds(sf::RenderTarget& rt);
+
+	void Draw(sf::RenderTarget& rt, bool draw_numbers = true);
 
 	void SaveToFile(const std::string& filename);
 
 	void LoadFromFile(const std::string& filename);
+
+	void AutogeneratePath(sf::Vector2i cell_size, sf::Vector2i start_position);
+
+	sf::IntRect GatherBounds()const;
 };

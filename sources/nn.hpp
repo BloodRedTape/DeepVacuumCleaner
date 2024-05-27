@@ -73,35 +73,43 @@ public:
 };
 
 
-namespace Serialization {
+template<>
+struct Serializer<Layer>{
+	static void ToStream(const Layer& layer, std::ostream& stream) {
+		Serializer<Matrix<float>>::ToStream(layer.Weights(), stream);
+		Serializer<Matrix<float>>::ToStream(layer.Biases(), stream);
+		Serializer<std::string>::ToStream(layer.FunctionName(), stream);
+	}
+
+	static std::optional<Layer> FromStream(std::istream& stream) {
+		auto w = Serializer<Matrix<float>>::FromStream(stream);
+		auto b = Serializer<Matrix<float>>::FromStream(stream);
+		auto s = Serializer<std::string>::FromStream(stream);
+
+		if(!w.has_value() || !b.has_value() || !s.has_value())
+			return std::nullopt;
+
+		return {Layer(std::move(w.value()), std::move(b.value()), std::move(s.value()))};
+	}
+};
+
+template<>
+struct Serializer<NeuralNetwork> {
+	static void ToStream(const NeuralNetwork& nn, std::ostream& stream) {
+		Serializer<std::vector<Layer>>::ToStream(nn.Layers(), stream);
+		Serializer<std::vector<int>>::ToStream(nn.Topology(), stream);
+		Serializer<std::vector<std::string>>::ToStream(nn.Functions(), stream);
+	}
+
+	static std::optional<NeuralNetwork> FromStream(std::istream& stream) {
+		auto l = Serializer<std::vector<Layer>>::FromStream(stream);
+		auto t = Serializer<std::vector<int>>::FromStream(stream);
+		auto f = Serializer<std::vector<std::string>>::FromStream(stream);
 	
-	inline void ToStream(const Layer& layer, std::ostream& stream) {
-		ToStream(layer.Weights(), stream);
-		ToStream(layer.Biases(), stream);
-		ToStream(layer.FunctionName(), stream);
+		if(!l.has_value() || !t.has_value() || !f.has_value())
+			return std::nullopt;
+
+		return {NeuralNetwork(std::move(l.value()), std::move(t.value()), std::move(f.value()))};
 	}
 
-	inline Layer FromStreamImpl(std::istream& stream, Layer*) {
-		auto w = FromStream<Matrix<float>>(stream);
-		auto b = FromStream<Matrix<float>>(stream);
-		auto s = FromStream<std::string>(stream);
-		return Layer(std::move(w), std::move(b), std::move(s));
-	}
-
-
-	inline void ToStream(const NeuralNetwork& nn, std::ostream& stream) {
-		ToStream(nn.Layers(), stream);
-		ToStream(nn.Topology(), stream);
-		ToStream(nn.Functions(), stream);
-	}
-
-	inline NeuralNetwork FromStreamImpl(std::istream& stream, NeuralNetwork *) {
-		auto l = 
-			FromStream<std::vector<Layer>>(stream);
-		auto t = 
-			FromStream<std::vector<int>>(stream);
-		auto f = 
-			FromStream<std::vector<std::string>>(stream);
-		return NeuralNetwork(std::move(l), std::move(t), std::move(f));
-	}
-}
+};

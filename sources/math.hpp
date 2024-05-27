@@ -79,6 +79,41 @@ namespace Math{
 		return false;
 	}
 
+	inline bool LineIntersect(sf::Vector2f p1, sf::Vector2f q1, sf::Vector2f p2, sf::Vector2f q2) {
+		auto orientation = [](sf::Vector2f p, sf::Vector2f q, sf::Vector2f r) {
+			float val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+			if (val == 0) return 0;  // collinear
+			return (val > 0) ? 1 : 2; // clock or counterclock wise
+		};
+
+	   int o1 = orientation(p1, q1, p2);
+	   int o2 = orientation(p1, q1, q2);
+		int o3 = orientation(p2, q2, p1);
+		int o4 = orientation(p2, q2, q1);
+
+		if (o1 != o2 && o3 != o4) return true;  // General case
+
+		return false;  // Doesn't handle special cases (collinear points)
+	}
+
+	inline bool LineRectIntersection(sf::Vector2f start, sf::Vector2f end, sf::FloatRect rect) {
+		// Get the four corners of the rectangle
+		sf::Vector2f topLeft(rect.left, rect.top);
+		sf::Vector2f topRight(rect.left + rect.width, rect.top);
+		sf::Vector2f bottomLeft(rect.left, rect.top + rect.height);
+		sf::Vector2f bottomRight(rect.left + rect.width, rect.top + rect.height);
+
+		// Check if the line intersects any of the four sides of the rectangle
+		if (LineIntersect(start, end, topLeft, topRight) ||
+			LineIntersect(start, end, topRight, bottomRight) ||
+			LineIntersect(start, end, bottomRight, bottomLeft) ||
+			LineIntersect(start, end, bottomLeft, topLeft)) {
+			return true;
+		}
+
+		return false;
+	}
+
 	inline bool IsBad(float num) {
 		return std::isinf(num) || std::isnan(num);
 	}

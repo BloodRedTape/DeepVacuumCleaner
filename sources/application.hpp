@@ -16,6 +16,8 @@ public:
 
 	virtual void OnEvent(const sf::Event& e);
 
+	virtual void OnImGui();
+
 	virtual void Render(sf::RenderTarget& rt);
 
 	sf::Vector2f MousePosition()const;

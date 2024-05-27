@@ -9,7 +9,8 @@
 #include "evolution_training.hpp"
 #include <iostream>
 #include <sstream>
-
+#include <filesystem>
+#include <bsl/file.hpp>
 
 class EvolutionTrainingApp: public ZoomMoveApplication{
 	using Super = ZoomMoveApplication;
@@ -42,9 +43,11 @@ public:
 	virtual void OnEvent(const sf::Event& e) override{ 
 		Super::OnEvent(e);
 
-		if(e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::Key::S && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl)){
-			m_Evo.SaveBest();
-			std::cout << "Saved\n";
+		if(const auto *key = e.getIf<sf::Event::KeyPressed>()){
+			if(key->code == sf::Keyboard::Key::S && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl)) {
+				m_Evo.SaveBest();
+				std::cout << "Saved\n";
+			}
 		}
 
 		if (e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::Key::Space) {
@@ -105,8 +108,12 @@ std::unique_ptr<Application> MakeApp<EvolutionTrainingApp>(sf::Vector2i size) {
 int main()
 {
 	srand(time(0));
+
+	std::filesystem::current_path("../../../run_tree");
+
+	WriteEntireFile("test/file.txt", "Hello");
 	
-	MakeApp<MapEditor>({1720, 1080})->Run();
+	MakeApp<MapEditor>({1920, 1080})->Run();
 	
 	return 0;
 }

@@ -32,6 +32,7 @@ namespace Render{
 
     inline void DrawCircle(sf::Vector2f position, float radius, sf::RenderTarget& rt, sf::Color color = sf::Color::White) {
 		sf::CircleShape shape(radius);
+        shape.setRadius(radius);
 		shape.setPosition((sf::Vector2f)position);
 		shape.setOrigin({radius, radius});
 		rt.draw(shape);

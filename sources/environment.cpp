@@ -79,11 +79,31 @@ bool GridDecomposition::IsOccupied(sf::Vector2i cell_index)const {
 	return std::find(OccupiedIndices.begin(), OccupiedIndices.end(), cell_index) != OccupiedIndices.end();
 }
 
+bool GridDecomposition::IsInBounds(sf::Vector2i index)const{
+	return index.x < CellsCount().x
+		&& index.y < CellsCount().y
+		&& index.x >= 0
+		&& index.y >= 0;
+};
+
 sf::Vector2i GridDecomposition::CellsCount()const {
 	return Bounds.getSize().cwiseDiv(CellSize);
 }
 
-std::vector<sf::Vector2i> GridDecomposition::BuildPath(sf::Vector2i start_position)const {
+bool GridDecomposition::IsOccupiedOrVisited(sf::Vector2i dst, const std::vector<sf::Vector2i>& visited)const{
+	return IsOccupied(dst) || std::find(visited.begin(), visited.end(), dst) != visited.end();
+}
+
+bool GridDecomposition::HasObstacles(sf::Vector2i src, sf::Vector2i step, int count)const {
+	for (int i = 0; i<count + 1; i++){
+		if(IsOccupied(src + step * i))
+			return true;
+	}
+
+	return false;
+}
+
+std::vector<sf::Vector2i> GridDecomposition::BuildPath(sf::Vector2i start_position, int step)const {
 	if (!Bounds.contains(start_position)) {
 		LogEnv(Error, "Start is not in the bounds");
 		return {};
@@ -109,21 +129,16 @@ std::vector<sf::Vector2i> GridDecomposition::BuildPath(sf::Vector2i start_positi
 		{-1, 0},
 	};
 
-	auto IsInBounds = [&](sf::Vector2i index) {
-		return index.x < CellsCount().x
-			&& index.y < CellsCount().y
-			&& index.x >= 0
-			&& index.y >= 0;
-	};
-
 	auto TryGetNextCell = [&](const std::vector<sf::Vector2i>& visited) -> std::optional<sf::Vector2i> {
+		const int Step = step;
+
 		for (auto it = visited.rbegin(); it != visited.rend(); ++it) {
 			sf::Vector2i current = *it;
 
 			for (auto dir : directions) {
-				auto candidate = current + dir;
+				auto candidate = current + dir * Step;
 
-				if (!IsOccupied(candidate) && IsInBounds(candidate) && std::find(visited.begin(), visited.end(), candidate) == visited.end())
+				if (IsInBounds(candidate) && !IsOccupiedOrVisited(candidate, visited) && !HasObstacles(current, dir, Step))
 					return { candidate };
 			}
 		}
@@ -175,9 +190,10 @@ void Environment::Draw(sf::RenderTarget& rt, bool draw_numbers) {
 	Render::DrawString(sf::Vector2f(StartPosition) - sf::Vector2f(0, PointRadius), "Start", rt);
 	Render::DrawCircle(sf::Vector2f(StartPosition), PointRadius, rt, sf::Color::Cyan);
 
+	sf::CircleShape shape(PointRadius);
+
 	for (int i = 0; i<Path.size(); i++) {
 		auto point = Path[i];
-		sf::CircleShape shape(PointRadius);
 		shape.setPosition((sf::Vector2f)point);
 		shape.setOrigin({PointRadius, PointRadius});
 		rt.draw(shape);
@@ -215,14 +231,14 @@ void Environment::LoadFromFile(const std::string& filename) {
 	Walls = std::move(walls.value());
 }
 
-void Environment::AutogeneratePath(sf::Vector2i cell_size, sf::Vector2i start_position) {
+void Environment::AutogeneratePath(sf::Vector2i cell_size, sf::Vector2i start_position, int step) {
 	LogEnvIf(Path.size(), Warning, "Path is already generated, overwriting");
 	Path.clear();
 	StartPosition = start_position;
 
 	Grid = GridDecomposition::Make(cell_size, GatherBounds(), Walls);
 
-	Path = Grid.BuildPath(start_position);
+	Path = Grid.BuildPath(start_position, step);
 }
 
 sf::Vector2i Min(sf::Vector2i first, sf::Vector2i second) {

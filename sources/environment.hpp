@@ -36,7 +36,7 @@ struct GridDecomposition {
 
 	void Draw(sf::RenderTarget& rt);
 
-	std::vector<sf::Vector2i> BuildPath(sf::Vector2i start_position)const;
+	std::vector<sf::Vector2i> BuildPath(sf::Vector2i start_position, int step)const;
 
 	sf::IntRect GetCellByIndex(sf::Vector2i index)const;
 
@@ -45,6 +45,12 @@ struct GridDecomposition {
 	sf::Vector2i CellIndexToMiddlePosition(sf::Vector2i cell_index)const;
 
 	bool IsOccupied(sf::Vector2i cell_index)const;
+
+	bool IsInBounds(sf::Vector2i cell_index)const;
+
+	bool IsOccupiedOrVisited(sf::Vector2i dst, const std::vector<sf::Vector2i>& visited)const;
+
+	bool HasObstacles(sf::Vector2i src, sf::Vector2i step, int count)const;
 
 	sf::Vector2i CellsCount()const;
 
@@ -70,7 +76,11 @@ struct Environment {
 
 	void LoadFromFile(const std::string& filename);
 
-	void AutogeneratePath(sf::Vector2i cell_size, sf::Vector2i start_position);
+	void AutogeneratePath(sf::Vector2i cell_size, sf::Vector2i start_position, int step);
 
 	sf::IntRect GatherBounds()const;
+
+	void Clear() {
+		*this = Environment();
+	}
 };

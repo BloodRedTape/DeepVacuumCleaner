@@ -17,9 +17,12 @@ private:
 	bool m_DrawBounds = true;
 	bool m_DrawGridDecomposition = true;
 	bool m_DrawNumbers = false;
-
+	
+	int m_Steps = 1;
 	sf::Vector2i m_GridCellSize = {20, 20};
 	sf::Vector2i m_StartPosition = {50, 50};
+
+	std::string m_MapFilename;
 public:
 
 	MapEditor(sf::Vector2i world_size);

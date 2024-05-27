@@ -28,7 +28,7 @@ public:
 	virtual void Tick(float dt) override{
 		Super::Tick(dt);
 
-		int num_per_frame = 100;
+		int num_per_frame = 400;
 		for (int i = 0; i < num_per_frame; i++) {
 			m_Evo.Tick(dt / num_per_frame);
 		}
@@ -61,8 +61,8 @@ public:
 	EvolutionDemoApp(sf::Vector2i size):
 		Super(size)
 	{
-		m_Cleaner.Agent().LoadFromFile("best8/0.bin");
-		m_Env.LoadFromFile("test.map");
+		m_Cleaner.Agent().LoadFromFile("best13/1.bin");
+		m_Env.LoadFromFile("room1.map");
 		m_Window.setFramerateLimit(60);
 		m_View.zoom(2);
 	}
@@ -88,18 +88,18 @@ std::unique_ptr<Application> MakeApp(sf::Vector2i size) {
 
 template<>
 std::unique_ptr<Application> MakeApp<EvolutionTrainingApp>(sf::Vector2i size) {
-	return std::make_unique<EvolutionTrainingApp>(size, std::optional<std::string>{"best7"});
+	return std::make_unique<EvolutionTrainingApp>(size, std::nullopt);
 }
 
 int main()
 {
 	srand(time(0));
 
-	std::filesystem::current_path("../../../run_tree");
+	std::filesystem::current_path("../../../../run_tree");
 
 	WriteEntireFile("test/file.txt", "Hello");
 	
-	MakeApp<MapEditor>({1920, 1080})->Run();
+	MakeApp<EvolutionTrainingApp>({1920, 1080})->Run();
 	
 	return 0;
 }

@@ -3,6 +3,18 @@
 #include "imgui.h"
 
 
+bool InputText(const char* label, std::string& buffer, ImGuiInputTextFlags flags = 0) {
+    return ImGui::InputText(label, buffer.data(), buffer.size() + 1, flags | ImGuiInputTextFlags_CallbackResize, [](ImGuiInputTextCallbackData *data)->int {
+        if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
+        {
+            std::string* str = (std::string*)data->UserData;
+            str->resize(data->BufTextLen);
+            data->Buf = str->data();
+        }
+        return 0;
+    }, &buffer);
+}
+
 MapEditor::MapEditor(sf::Vector2i world_size):
 	ZoomMoveApplication(world_size)
 {
@@ -46,9 +58,31 @@ void MapEditor::OnImGui() {
 	ImGui::Checkbox("Draw Grid Decomposition", &m_DrawGridDecomposition);
 	ImGui::Checkbox("Draw Path Numbers", &m_DrawNumbers);
 	ImGui::InputInt2("Grid Cell Size", &m_GridCellSize.x);
+	ImGui::Text("Vacuum size in cells: %d", (int)VacuumCleaner::Radius * 2 / std::min(m_GridCellSize.x, m_GridCellSize.y));
+	ImGui::InputInt("Steps", &m_Steps);
 
-	if (ImGui::Button("Rebuild")) {
-		m_Env.AutogeneratePath(m_GridCellSize, m_StartPosition);
+	if (ImGui::Button("Rebuild"))
+		m_Env.AutogeneratePath(m_GridCellSize, m_StartPosition, m_Steps);
+	
+	if(ImGui::Button("Clear"))
+		m_Env.Clear();
+
+	InputText("Filename", m_MapFilename);
+	if (ImGui::Button("Save")) {
+		m_Env.SaveToFile(m_MapFilename + ".map");
+	}
+
+	for (auto file : std::filesystem::directory_iterator(".")) {
+		if(!file.is_regular_file())
+			continue;
+
+		if(file.path().extension() != ".map")
+			continue;
+
+		if (ImGui::Button(file.path().string().c_str())) {
+			m_Env.LoadFromFile(file.path().string());
+			m_MapFilename = file.path().stem().string();
+		}
 	}
 
 	ImGui::End();

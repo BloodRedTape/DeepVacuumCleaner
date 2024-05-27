@@ -7,7 +7,6 @@
 #include <ostream>
 #include <istream>
 
-
 struct Wall {
 	sf::Vector2i Start;
 	sf::Vector2i End;

@@ -16,6 +16,9 @@ class EvolutionTrainingApp: public ZoomMoveApplication{
 	using Super = ZoomMoveApplication;
 private:
 	EvolutionTraining m_Evo;
+
+	bool m_IsPaused = false;
+	bool m_IsDebug = false;
 public:
 	EvolutionTrainingApp(sf::Vector2i size, std::optional<std::string> filepath):
 		Super(size),
@@ -29,6 +32,10 @@ public:
 		Super::Tick(dt);
 
 		int num_per_frame = 400;
+
+		if(m_IsPaused)
+			return;
+
 		for (int i = 0; i < num_per_frame; i++) {
 			m_Evo.Tick(dt / num_per_frame);
 		}
@@ -43,12 +50,20 @@ public:
 				std::cout << "Saved\n";
 			}
 		}
+
+		if (e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::Key::Space) {
+			m_IsPaused = !m_IsPaused;
+		}
+
+		if (e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::Key::D) {
+			m_IsDebug = !m_IsDebug;
+		}
 	}
 
 	virtual void Render(sf::RenderTarget& rt) override{
 		Super::Render(rt);
 
-		m_Evo.Draw(rt);
+		m_Evo.Draw(rt, m_IsDebug);
 	}
 };
 

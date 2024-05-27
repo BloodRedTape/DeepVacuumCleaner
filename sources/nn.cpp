@@ -89,22 +89,19 @@ Layer Layer::Crossover(const Layer& parent1, const Layer& parent2) {
 	return child;
 }
 
-Layer Layer::MutateLayer(const Layer& layer, float mutationRate) {
+Layer Layer::MutateLayer(const Layer& layer, float chance, float range) {
 	assert(layer.IsComplete());
 
     Layer mutatedLayer(layer);
-    
-    mutatedLayer.m_Weights.ForEach([=](float &e) {
-        if (GetRandom<float>(0, 1) < mutationRate) {
-            e += GetRandom<float>(-100, 100); // Adjust mutation strength as needed
-        }
-    });
 
-    mutatedLayer.m_Biases.ForEach([=](float &e) {
-        if (GetRandom<float>(0, 1) < mutationRate) {
-            e += GetRandom<float>(-100, 100); // Adjust mutation strength as needed
+	auto mutator = [=](float &e) {
+        if (GetRandom<float>(0, 1) < chance) {
+            e += GetRandom<float>(-range, range); // Adjust mutation strength as needed
         }
-    });
+    };
+    
+    mutatedLayer.m_Weights.ForEach(mutator);
+    mutatedLayer.m_Biases.ForEach(mutator);
 
     return mutatedLayer;
 }
@@ -144,11 +141,11 @@ NeuralNetwork NeuralNetwork::Crossover(const NeuralNetwork& parent1, const Neura
 	return child;
 }
 
-NeuralNetwork NeuralNetwork::MutateNetwork(const NeuralNetwork& network, float mutationRate) {
+NeuralNetwork NeuralNetwork::MutateNetwork(const NeuralNetwork& network, float chance, float range) {
     NeuralNetwork mutatedNetwork(network);
 
     for (auto& layer : mutatedNetwork.m_Model) {
-        layer = Layer::MutateLayer(layer, mutationRate);
+        layer = Layer::MutateLayer(layer, chance, range);
     }
 
     return mutatedNetwork;

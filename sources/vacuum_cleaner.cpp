@@ -1,6 +1,7 @@
 #include "vacuum_cleaner.hpp"
 #include "math.hpp"
 #include "render.hpp"
+#include "config.hpp"
 
 VacuumCleaner::VacuumCleaner() {
 	Sensors.push_back({0});
@@ -20,27 +21,27 @@ void VacuumCleaner::Move(float forward, float rotate) {
 }
 
 void VacuumCleaner::Draw(sf::RenderTarget& rt, sf::Color color)const {
-	sf::CircleShape shape(Radius);
+	sf::CircleShape shape(CleanerRadius);
 
 	shape.setPosition(Position);
 	shape.setFillColor(color);
 
 	shape.setOutlineColor(sf::Color::White);
 	shape.setOutlineThickness(3);
-	shape.setOrigin({Radius, Radius});
+	shape.setOrigin({CleanerRadius, CleanerRadius});
 
 	rt.draw(shape);
 
 	
 	for (auto sensor : Sensors) {
 		auto sensor_direction = Math::RotationToDirection(sensor.Rotation + Rotation);
-		auto start = Position + sensor_direction * Radius;
-		auto end = start + sensor_direction * RayLength;
+		auto start = Position + sensor_direction * CleanerRadius;
+		auto end = start + sensor_direction * CleanerRayLength;
 		Render::DrawLine(start, end, 3, rt, sf::Color::Red);
 	}
 
-	auto start = Position + Direction() * Radius;
-	Render::DrawLine(start, start + Direction() * RayLength, 3, rt, sf::Color::Green);
+	auto start = Position + Direction() * CleanerRadius;
+	Render::DrawLine(start, start + Direction() * CleanerRayLength, 3, rt, sf::Color::Green);
 }
 
 sf::Vector2f VacuumCleaner::Direction()const {
@@ -54,7 +55,7 @@ void VacuumCleaner::DrawIntersections(sf::RenderTarget& rt, const Environment &e
 		const auto &sensor = cleaner.Sensors[i];
 
 		auto direction = Math::RotationToDirection(cleaner.Rotation + sensor.Rotation);
-		auto start = cleaner.Position + cleaner.Radius * direction; 
+		auto start = cleaner.Position + CleanerRadius * direction; 
 
 		float intersect = Wall::TraceNearestObstacle(start, direction, env.Walls);
 			

@@ -6,7 +6,7 @@ Application::Application(sf::Vector2i world_size):
 {}
 
 void Application::Run() {
-	m_Window.setFramerateLimit(60);
+	m_Window.setVerticalSyncEnabled(false);
 
 	(void)ImGui::SFML::Init(m_Window);
 
@@ -38,9 +38,11 @@ void Application::Run() {
 
 void Application::Tick(float dt) {	}
 
+void Application::OnEvent(const sf::Event& e) {
+	if(e.type == sf::Event::Closed)
+		m_Window.close();
+}
 void Application::OnImGui() {	}
-
-void Application::OnEvent(const sf::Event& e) { }
 
 void Application::Render(sf::RenderTarget& rt) { }
 

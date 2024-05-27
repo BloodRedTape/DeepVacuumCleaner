@@ -4,6 +4,7 @@
 #include "render.hpp"
 #include <fstream>
 #include <SFML/Graphics.hpp>
+#include "config.hpp"
 #include "bsl/log.hpp"
 
 DEFINE_LOG_CATEGORY(Env);

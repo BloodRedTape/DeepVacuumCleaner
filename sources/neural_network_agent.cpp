@@ -1,6 +1,7 @@
 #include "neural_network_agent.hpp"
 #include "math.hpp"
 #include "stupid_agent.hpp"
+#include "config.hpp"
 
 NeuralNetworkAgent::NeuralNetworkAgent(NeuralNetwork &&nn):
 	m_NN(std::move(nn))
@@ -8,12 +9,10 @@ NeuralNetworkAgent::NeuralNetworkAgent(NeuralNetwork &&nn):
 
 NeuralNetworkAgent::NeuralNetworkAgent(int num_sensors):
 	m_NN(
-		{num_sensors + 3, 18, 18, 8, 2},
-		{"None", "None", "Sigmoid", "Sigmoid", "Tanh"}
+		{num_sensors + 3, 64, 64, 18, 2},
+		{"None", "None", "Tanh", "Tanh", "Tanh"}
 	)
-{
-	Reset();
-}
+{}
 
 sf::Vector2f NeuralNetworkAgent::Iterate(const VacuumCleaner &cleaner, const Environment & env, size_t it) {
 	if (!env.IsFullfiled()) 
@@ -36,7 +35,7 @@ sf::Vector2f NeuralNetworkAgent::Iterate(const VacuumCleaner &cleaner, const Env
 		const auto &sensor = cleaner.Sensors[i];
 
 		auto direction = Math::RotationToDirection(cleaner.Rotation + sensor.Rotation);
-		auto start = cleaner.Position + cleaner.Radius * direction; 
+		auto start = cleaner.Position + CleanerRadius * direction; 
 
 		input[0][i] = Wall::TraceNearestObstacle(start, direction, env.Walls);
 	}
@@ -50,26 +49,18 @@ sf::Vector2f NeuralNetworkAgent::Iterate(const VacuumCleaner &cleaner, const Env
 	float forward  = output[0][0];
 	float rotation = output[0][1];
 
-	auto [stupid_forward, stupid_rotation] = StupidAgent::Stuff(cleaner, m_CurrentGoal, env);
+	float distance_to_goal = (cleaner.Position - goal).length();
 
-	m_AvgRotationDifference += std::abs(stupid_rotation - rotation);
+	m_TotalDistanceTraveled += forward;
+	m_CurrentDistanceToGoal = distance_to_goal;
 
-	float length_to_goal = (cleaner.Position - goal).length();
 
-	if(m_NearsetsToGoal.size() == m_CurrentGoal){
-		m_NearsetsToGoal.push_back({9999999, 0});
-		m_DistanceFromStartToGoal = length_to_goal;
-	}
+	m_MinDistanceToGoal = std::min(m_MinDistanceToGoal, distance_to_goal);
+	m_MaxDistanceToGoal = std::max(m_MaxDistanceToGoal, distance_to_goal);
 
-	m_HasEscaped = std::abs(length_to_goal - m_DistanceFromStartToGoal) > m_DistanceFromStartToGoal;
 
-	if(m_NearsetsToGoal[m_CurrentGoal].first > length_to_goal){
-		m_NearsetsToGoal[m_CurrentGoal].first  = length_to_goal;
-		m_NearsetsToGoal[m_CurrentGoal].second = it;
-	}
-
-	if (length_to_goal < cleaner.Radius) 
-		m_CurrentGoal++;
+	if (distance_to_goal < CleanerRadius)
+		BeginGoal(m_CurrentGoal + 1, cleaner, env);
 
 	return {forward, rotation};
 }
@@ -78,36 +69,22 @@ size_t NeuralNetworkAgent::CurrentGoal()const {
 	return m_CurrentGoal;
 }
 
-void NeuralNetworkAgent::Reset(float rotation) {
-	m_CurrentGoal = 0;
+void NeuralNetworkAgent::Reset(const VacuumCleaner &cleaner, const Environment &env) {
+	BeginGoal(0, cleaner, env);
 }
 
-bool NeuralNetworkAgent::HasEscaped()const {
-	return m_HasEscaped;
+bool NeuralNetworkAgent::HasNotTraveled()const {
+	return std::abs(m_TotalDistanceTraveled) < Eps;
 }
 
-float NeuralNetworkAgent::AvgNearesstToGoal()const {
-	float avg = 0.f;
+void NeuralNetworkAgent::BeginGoal(size_t index, const VacuumCleaner &cleaner, const Environment &env){
+	m_CurrentGoal = index;
 
-	for(auto [x, _]: m_NearsetsToGoal)
-		avg += x;
-
-	return avg / m_NearsetsToGoal.size();
-}
-
-size_t NeuralNetworkAgent::AvgFastestToGoal()const {
-	size_t sum = 0;
-
-	size_t avg = 0;
-
-	for (auto [_, x] : m_NearsetsToGoal)
-	{
-		sum += x;
-		auto it_to_goal = x - sum;
-		avg += it_to_goal;
-	}
-
-	return avg / m_NearsetsToGoal.size();
+	sf::Vector2f goal(env.Path[index]);
+	
+	m_InitialDistanceToGoal = (cleaner.Position - goal).length();
+	m_MaxDistanceToGoal = 0.f;
+	m_MinDistanceToGoal = m_InitialDistanceToGoal;
 }
 
 float NeuralNetworkAgent::FitnessFunction(const VacuumCleaner &cleaner, const Environment& env)const {
@@ -120,9 +97,13 @@ float NeuralNetworkAgent::FitnessFunction(const VacuumCleaner &cleaner, const En
 		
 	sf::Vector2f goal(env.Path[m_CurrentGoal]);
 
-	constexpr float GoalPrice = 100000;
+	float normalized_min = m_MinDistanceToGoal / m_InitialDistanceToGoal;
+	float normalized_max = m_MaxDistanceToGoal / m_InitialDistanceToGoal;
 
-	return GoalPrice * m_CurrentGoal - AvgNearesstToGoal() - AvgFastestToGoal() + (m_AvgRotationDifference / m_Iteration) * 1000;
+	float penalty = -normalized_max;
+	float reward = 1.f - normalized_min;
+
+	return m_CurrentGoal + penalty + reward;
 }
 
 void NeuralNetworkAgent::SaveToFile(const std::string& filename) {
@@ -152,6 +133,6 @@ NeuralNetworkAgent NeuralNetworkAgent::Crossover(const NeuralNetworkAgent& first
 	return {NeuralNetwork::Crossover(first.m_NN, second.m_NN)};
 }
 
-NeuralNetworkAgent NeuralNetworkAgent::Mutate(const NeuralNetworkAgent& agent, float rate) {
-	return {NeuralNetwork::MutateNetwork(agent.m_NN, rate)};
+NeuralNetworkAgent NeuralNetworkAgent::Mutate(const NeuralNetworkAgent& agent, float chance, float range) {
+	return {NeuralNetwork::MutateNetwork(agent.m_NN, chance, range)};
 }

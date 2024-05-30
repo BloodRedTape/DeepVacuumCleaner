@@ -39,7 +39,7 @@ void Application::Run() {
 void Application::Tick(float dt) {	}
 
 void Application::OnEvent(const sf::Event& e) {
-	if(e.type == sf::Event::Closed)
+	if(e.is<sf::Event::Closed>())
 		m_Window.close();
 }
 void Application::OnImGui() {	}

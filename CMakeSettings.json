@@ -15,14 +15,16 @@
 		},
 		{
 			"name": "x64-Release",
-			"generator": "Ninja",
+			"generator": "Visual Studio 17 2022 Win64",
 			"configurationType": "RelWithDebInfo",
-			"buildRoot": "${projectDir}\\out\\build\\${name}",
+			"buildRoot": "${projectDir}\\build\\${name}",
 			"installRoot": "${projectDir}\\out\\install\\${name}",
 			"cmakeCommandArgs": "",
 			"buildCommandArgs": "",
 			"ctestCommandArgs": "",
-			"inheritEnvironments": [ "msvc_x64_x64" ]
+			"inheritEnvironments": [ "msvc_x64_x64" ],
+			"cmakeExecutable": "C:/Program Files/CMake/bin/cmake.exe",
+			"cmakeToolchain": "X:/Dev/DeepVacuumCleaner/build/generators/conan_toolchain.cmake"
 		}
 	]
 }

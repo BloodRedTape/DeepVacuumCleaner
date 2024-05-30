@@ -35,7 +35,7 @@ void VacuumCleanerOperator::Draw(sf::RenderTarget& rt)const{
 }
 
 void VacuumCleanerOperator::DrawFitness(sf::RenderTarget& rt, const Environment& env)const{
-	Render::DrawStrings(m_Cleaner.Position, rt, {
+	Render::DrawStrings(rt, m_Cleaner.Position, {
 		std::to_string(m_Agent.FitnessFunction(m_Cleaner, env)),
 		std::to_string(m_Agent.CurrentDistanceToGoalNormalized())
 	});

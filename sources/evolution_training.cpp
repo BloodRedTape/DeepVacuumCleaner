@@ -166,7 +166,7 @@ void EvolutionTraining::Draw(sf::RenderTarget& rt, bool debug) {
 }
 
 void EvolutionTraining::DrawUI(sf::RenderTarget& rt) {
-	Render::DrawStrings({0, 0}, rt, {
+	Render::DrawStrings(rt, sf::Vector2i(0, 0), {
 		"Alive: " + std::to_string(m_Population.size()),
 		"Generation: " + std::to_string(m_Generation),
 		"Iterations: " + std::to_string(m_IterationsNumber),

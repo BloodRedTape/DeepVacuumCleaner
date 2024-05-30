@@ -23,6 +23,15 @@ private:
 	sf::Vector2i m_StartPosition = {50, 50};
 
 	std::string m_MapFilename;
+
+	std::size_t m_PathDrawingMode = 0;
+
+	bool m_CoveragePathDebugging = true;
+	bool m_ForAllCells = true;
+	bool m_DrawCurrentCell = false;
+	bool m_DrawZoneDecomposition = false;
+	bool m_DrawFullZoneDecomposition = false;
+	bool m_DrawCoveragePoints = false;
 public:
 
 	MapEditor(sf::Vector2i world_size);

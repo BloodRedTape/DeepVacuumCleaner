@@ -5,44 +5,78 @@
 namespace Render{
     
     const sf::Font &GetFont();
+    
+    extern std::size_t s_DrawcallsCount;
 
-	inline void DrawLine(sf::Vector2f start, sf::Vector2f end, float thichness, sf::RenderTarget &rt, sf::Color color = sf::Color::White) {
-		auto direction = end - start;
+    template<typename T>
+	inline void DrawLine(sf::RenderTarget &rt, sf::Vector2<T> start, sf::Vector2<T> end, float thichness, sf::Color color = sf::Color::White) {
+		auto direction = sf::Vector2f(end - start);
 
 		float WallLength = direction.length();
 
 		if(std::abs(WallLength) < 0.01)
 			return;
 
-		sf::RectangleShape rect;
-		rect.setPosition(start);
+		static sf::RectangleShape rect;
+		rect.setPosition(sf::Vector2f(start));
 		rect.setSize({ WallLength, thichness});
 		rect.setRotation(direction.angle());
 		rect.setFillColor(color);
 		rect.setOrigin({0, thichness/2.f});
 
 		rt.draw(rect);
+        s_DrawcallsCount++;
 	}
 
-	inline void DrawString(sf::Vector2f position, std::string str, sf::RenderTarget& rt) {
+    template<typename T>
+	inline void DrawString(sf::RenderTarget& rt, sf::Vector2<T> position, std::string str) {
 		sf::Text text(Render::GetFont(), str);
-		text.setPosition(position);
+		text.setPosition(sf::Vector2f(position));
 		rt.draw(text);
+        s_DrawcallsCount++;
 	}
 
-	inline void DrawStrings(sf::Vector2f position, sf::RenderTarget& rt, std::initializer_list<std::string> strings) {
+    template<typename T>
+	inline void DrawStrings(sf::RenderTarget& rt, sf::Vector2<T> position, std::initializer_list<std::string> strings) {
         for (int i = 0; i < strings.size(); i++)
-            DrawString(position + sf::Vector2f(0, i * 40), strings.begin()[i], rt);
+            DrawString(rt, sf::Vector2f(position) + sf::Vector2f(0, i * 40), strings.begin()[i]);
 	}
 
-    inline void DrawCircle(sf::Vector2f position, float radius, sf::RenderTarget& rt, sf::Color color = sf::Color::White) {
-		sf::CircleShape shape(radius);
+    template<typename T>
+    inline void DrawCircle(sf::RenderTarget& rt, sf::Vector2<T> position, float radius, sf::Color color = sf::Color::White) {
+		static sf::CircleShape shape;
         shape.setRadius(radius);
-		shape.setPosition((sf::Vector2f)position);
+		shape.setPosition(sf::Vector2f(position));
 		shape.setOrigin({radius, radius});
         shape.setFillColor(color);
 		rt.draw(shape);
+        s_DrawcallsCount++;
     }
+    
+    template<typename T>
+    inline void DrawRect(sf::RenderTarget& rt, sf::Vector2<T> position, sf::Vector2<T> size, sf::Color color = sf::Color::White, float outline = 0.f, sf::Color outline_color = sf::Color::White) {
+        static sf::RectangleShape rect;
+        rect.setPosition(sf::Vector2f(position));
+        rect.setSize(sf::Vector2f(size));
+        rect.setFillColor(color);
+        rect.setOutlineThickness(outline);
+        rect.setOutlineColor(outline_color);
+        rt.draw(rect);
+        s_DrawcallsCount++;
+    }
+
+    template<typename T>
+    inline void DrawRect(sf::RenderTarget& rt, sf::Rect<T> rect_size, sf::Color color = sf::Color::White, float outline = 0.f, sf::Color outline_color = sf::Color::White) {
+        static sf::RectangleShape rect;
+        rect.setPosition(sf::Vector2f(rect_size.getPosition()));
+        rect.setSize(sf::Vector2f(rect_size.getSize()));
+        rect.setFillColor(color);
+        rect.setOutlineThickness(outline);
+        rect.setOutlineColor(outline_color);
+        rt.draw(rect);
+        s_DrawcallsCount++;
+    }
+
 	
 inline sf::Color hsvToRgb(float h, float s, float v) {
     if (s <= 0.0f) {

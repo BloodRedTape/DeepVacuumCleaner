@@ -1,6 +1,8 @@
 #include "render.hpp"
 
 namespace Render {
+    std::size_t s_DrawcallsCount = 0;
+
 	static sf::Font MakeFont(const char *path) {
 		auto font = sf::Font::loadFromFile(path);
 		assert(font.has_value());

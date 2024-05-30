@@ -74,6 +74,13 @@ sf::Vector2i GridDecomposition::PositionToCellIndex(sf::Vector2i position)const{
 	return (position - Bounds.getPosition()).cwiseDiv(CellSize);
 }
 
+sf::Vector2i GridDecomposition::LocalPositionToCellIndex(sf::Vector2i position) const{
+	if(!Bounds.contains(position))
+		return sf::Vector2i(-1, -1);
+
+	return position.cwiseDiv(CellSize);
+}
+
 sf::Vector2i GridDecomposition::CellIndexToMiddlePosition(sf::Vector2i cell_index)const {
 	return Bounds.getPosition() + cell_index.cwiseMul(CellSize) + CellSize / 2;
 }
@@ -277,7 +284,8 @@ struct PathBuilder {
 
 		return result;
 	}
-
+	
+	//Visit points are in world dimension of grid coordinates
 	std::vector<sf::Vector2i> MakeVisitPoints(sf::Vector2i coverage_cell)const{
 		auto full_coverage_zones = ToFullCoverageZones(MakeZoneDecomposition(coverage_cell));
 
@@ -289,6 +297,63 @@ struct PathBuilder {
 			points.push_back(absoule.getCenter());
 		}
 		return points;
+	}
+	
+	bool AreDirectlyReachable(sf::Vector2i local_src, sf::Vector2i local_dst)const {
+		sf::Vector2i cell_src = Grid.LocalPositionToCellIndex(local_src);
+		sf::Vector2i cell_dst = Grid.LocalPositionToCellIndex(local_dst);
+
+		sf::Vector2i path = cell_dst - cell_src;
+		
+		for (int x = 0, y = 0; x < path.x; x++) {
+
+
+			
+			sf::Vector2i path_cell(x, y);
+
+			auto coverage = TryExtendUntilFullCoverage({path_cell, {1, 1}});
+
+			if(!coverage.has_value())
+				return false;
+		}
+
+		return true;
+	}
+
+	std::vector<sf::Vector2i> BuildPath(sf::Vector2i start_position)const{
+		if (!Grid.Bounds.contains(start_position)) {
+			LogEnv(Error, "Start is not in the bounds");
+			return {};
+		}
+
+		start_position -= Grid.Bounds.getPosition();
+
+		std::vector<sf::Vector2i> path;
+		path.push_back(start_position);
+		
+		static const sf::Vector2i directions[] = {
+			{ 0, 1},
+			{ 1, 0},
+			{ 0,-1},
+			{-1, 0},
+		};
+
+		sf::Vector2i current_direction = directions[0];
+		
+		for(;;) {
+			auto local_position = path.back();
+			auto cell_index = Grid.LocalPositionToCellIndex(local_position);
+			assert(cell_index.x != -1 && cell_index.y != -1);
+
+			sf::Vector2i current_coverage_cell = GridToCoverageCell(cell_index);
+			
+			std::vector<sf::Vector2i> visit_points = MakeVisitPoints(current_coverage_cell);
+
+			break;
+		}
+
+
+		return path;
 	}
 };
 
@@ -365,96 +430,94 @@ void Environment::DrawBounds(sf::RenderTarget& rt) {
 
 	const sf::Color BoundsColor = sf::Color::Magenta;
 
-	Render::DrawLine(bounds.getPosition(), bounds.getPosition() + sf::Vector2f(0, bounds.getSize().y), 5.f, rt, BoundsColor);
-	Render::DrawLine(bounds.getPosition(), bounds.getPosition() + sf::Vector2f(bounds.getSize().x, 0), 5.f, rt, BoundsColor);
+	Render::DrawLine(rt, bounds.getPosition(), bounds.getPosition() + sf::Vector2f(0, bounds.getSize().y), 5.f, BoundsColor);
+	Render::DrawLine(rt, bounds.getPosition(), bounds.getPosition() + sf::Vector2f(bounds.getSize().x, 0), 5.f, BoundsColor);
 
-	Render::DrawLine(bounds.getPosition() + bounds.getSize(), bounds.getPosition() + sf::Vector2f(0, bounds.getSize().y), 5.f, rt, BoundsColor);
-	Render::DrawLine(bounds.getPosition() + bounds.getSize(), bounds.getPosition() + sf::Vector2f(bounds.getSize().x, 0), 5.f, rt, BoundsColor);
+	Render::DrawLine(rt, bounds.getPosition() + bounds.getSize(), bounds.getPosition() + sf::Vector2f(0, bounds.getSize().y), 5.f, BoundsColor);
+	Render::DrawLine(rt, bounds.getPosition() + bounds.getSize(), bounds.getPosition() + sf::Vector2f(bounds.getSize().x, 0), 5.f, BoundsColor);
 }
 
-void Environment::Draw(sf::RenderTarget& rt, bool draw_numbers) {
+void Environment::Draw(sf::RenderTarget& rt, std::size_t path_drawing_mode) {
 	
 	constexpr float PointRadius = 5.f;
 
-	Render::DrawString(sf::Vector2f(StartPosition) - sf::Vector2f(0, PointRadius), "Start", rt);
-	Render::DrawCircle(sf::Vector2f(StartPosition), PointRadius, rt, sf::Color::Cyan);
+	Render::DrawString(rt, StartPosition - sf::Vector2i(0, PointRadius), "Start");
+	Render::DrawCircle(rt, StartPosition, PointRadius, sf::Color::Cyan);
 
-	sf::CircleShape shape(PointRadius);
-
-	for (int i = 0; i<Path.size(); i++) {
-		auto point = Path[i];
-		shape.setPosition((sf::Vector2f)point);
-		shape.setOrigin({PointRadius, PointRadius});
-		rt.draw(shape);
-		if(draw_numbers)
-			Render::DrawString(sf::Vector2f(point) + sf::Vector2f(0, PointRadius), std::to_string(i), rt);
+	if(path_drawing_mode == PathWithPoints){
+		for (int i = 0; i<Path.size(); i++) {
+			auto point = Path[i];
+			
+			Render::DrawCircle(rt, point, PointRadius);
+			Render::DrawString(rt, point + sf::Vector2i(0, PointRadius), std::to_string(i));
+		}
+	}
+	if (path_drawing_mode == PathWithLines && Path.size()) {
+		for (int i = 0; i<Path.size() - 1; i++) {
+			auto start = Path[i];
+			auto end = Path[i + 1];
+			Render::DrawLine(rt, start, end, 3.f);
+		}
 	}
 
 
-	for (const auto &wall : Walls) {
-		Render::DrawLine(sf::Vector2f(wall.Start), sf::Vector2f(wall.End), WallHeight, rt);
-	}
+	for (const auto &wall : Walls)
+		Render::DrawLine(rt, wall.Start, wall.End, WallHeight);
 }
-void Environment::DrawZones(sf::RenderTarget& rt, sf::Vector2i mouse_position, bool zone, bool full_zone, bool points, bool cell_outline) {
 
-	auto cell = Grid.PositionToCellIndex(mouse_position);
-
-	if(cell.x == -1 || cell.y == -1)
-		return;
-
-	PathBuilder builder(Grid, 4);
-
-	if(zone){
-		auto zones = builder.MakeZoneDecomposition(builder.GridToCoverageCell(cell));
+static void DrawForCell(const PathBuilder& builder, sf::RenderTarget& rt, sf::Vector2i coverage_cell, bool zone, bool full_zone, bool points, bool cell_outline) {
+	if (zone) {
+		auto zones = builder.MakeZoneDecomposition(coverage_cell);
 
 		for (auto zone : zones) {
-			sf::RectangleShape rect;
-			rect.setSize(Grid.CellRectToAbsolute(zone).getSize());
-			rect.setPosition(Grid.CellRectToAbsolute(zone).getPosition());
-
-			rect.setFillColor(sf::Color(255, 255, 255, 20));
-			rect.setOutlineThickness(2);
-			rect.setOutlineColor(sf::Color::Cyan);
-			rt.draw(rect);
+			Render::DrawRect(rt, builder.Grid.CellRectToAbsolute(zone), sf::Color::Cyan * sf::Color(255, 255, 255, 40), 2, sf::Color::Cyan);
 		}
 
 	}
 	if (full_zone) {
-		auto zones = builder.MakeZoneDecomposition(builder.GridToCoverageCell(cell));
+		auto zones = builder.MakeZoneDecomposition(coverage_cell);
 
 		for (auto zone : builder.ToFullCoverageZones(zones)) {
-			sf::RectangleShape rect;
-			rect.setSize(Grid.CellRectToAbsolute(zone).getSize());
-			rect.setPosition(Grid.CellRectToAbsolute(zone).getPosition());
-
-			rect.setFillColor(sf::Color(255, 255, 255, 20));
-			rect.setOutlineThickness(2);
-			rect.setOutlineColor(sf::Color::Green);
-			rt.draw(rect);
+			Render::DrawRect(rt, builder.Grid.CellRectToAbsolute(zone), sf::Color::Green * sf::Color(255, 255, 255, 20), 2, sf::Color::Green);
 		}
 	}
 
 	if (points) {
-		auto points = builder.MakeVisitPoints(builder.GridToCoverageCell(cell));
+		auto points = builder.MakeVisitPoints(coverage_cell);
 
-		for (auto point: points)
-			Render::DrawCircle(sf::Vector2f(Grid.Bounds.getPosition() + point), 5.f, rt, sf::Color::Green);
+		for (auto point : points)
+			Render::DrawCircle(rt, builder.Grid.Bounds.getPosition() + point, 5.f, sf::Color::Green);
 	}
 
 	if (cell_outline) {
-		auto coverage_rect = builder.CoverageCellRect(builder.GridToCoverageCell(cell));
+		auto coverage_rect = builder.CoverageCellRect(coverage_cell);
 
-		sf::RectangleShape rect;
-		rect.setSize(Grid.CellRectToAbsolute(coverage_rect).getSize());
-		rect.setPosition(Grid.CellRectToAbsolute(coverage_rect).getPosition());
-
-		rect.setFillColor(sf::Color(255, 255, 255, 0));
-		rect.setOutlineThickness(1);
-		rect.setOutlineColor(sf::Color::Magenta);
-		rt.draw(rect);
+		Render::DrawRect(rt, builder.Grid.CellRectToAbsolute(coverage_rect), sf::Color(255, 255, 255, 0), 1, sf::Color::Magenta);
 	}
+}
 
-	//Render::DrawString(sf::Vector2f(mouse_position) + sf::Vector2f(0, 30), Format("%\n% %", zones.size(), cell.x, cell.y), rt);
+void Environment::DrawZones(sf::RenderTarget& rt, sf::Vector2i mouse_position, bool for_all_cells, bool zone, bool full_zone, bool points, bool cell_outline) {
+
+	PathBuilder builder(Grid, CoverageSize);
+
+	if(!for_all_cells){
+		auto cell = Grid.PositionToCellIndex(mouse_position);
+
+		if(cell.x == -1 || cell.y == -1)
+			return;
+
+
+		auto coverage_cell = builder.GridToCoverageCell(cell);
+
+		DrawForCell(builder, rt, coverage_cell, zone, full_zone, points, cell_outline);
+	} else {
+		for(int x = 0; x < builder.CoverageGridSize.x; x++){
+			for(int y = 0; y < builder.CoverageGridSize.y; y++){
+				sf::Vector2i coverage_cell(x, y);
+				DrawForCell(builder, rt, coverage_cell, zone, full_zone, points, cell_outline);
+			}
+		}
+	}
 }
 
 void Environment::SaveToFile(const std::string& filename) {
@@ -488,7 +551,9 @@ void Environment::AutogeneratePath(sf::Vector2i cell_size, sf::Vector2i start_po
 
 	Grid = GridDecomposition::Make(cell_size, GatherBounds(), Walls);
 
-	Path = Grid.BuildPath(start_position, step);
+	//Path = Grid.BuildPath(start_position, step);
+
+	Path = PathBuilder(Grid, CoverageSize).BuildPath(start_position);
 }
 
 sf::Vector2i Min(sf::Vector2i first, sf::Vector2i second) {

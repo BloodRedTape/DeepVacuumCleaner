@@ -1,5 +1,6 @@
 #include "application.hpp"
 #include "imgui-SFML.h"
+#include "render.hpp"
 
 Application::Application(sf::Vector2i world_size):
 	m_WorldSize(world_size)
@@ -27,6 +28,7 @@ void Application::Run() {
 
 		OnImGui();
 
+		Render::s_DrawcallsCount = 0;
 		m_Window.clear();
 		Render(m_Window);
 		ImGui::SFML::Render(m_Window);

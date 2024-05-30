@@ -41,6 +41,8 @@ struct GridDecomposition {
 
 	sf::Vector2i PositionToCellIndex(sf::Vector2i position)const;
 
+	sf::Vector2i LocalPositionToCellIndex(sf::Vector2i position)const;
+
 	sf::Vector2i CellIndexToMiddlePosition(sf::Vector2i cell_index)const;
 
 	bool IsOccupied(sf::Vector2i cell_index)const;
@@ -68,16 +70,20 @@ struct Environment {
 	sf::Vector2i StartPosition;
 	
 	GridDecomposition Grid;
+	std::size_t CoverageSize = 4;
 
 	static constexpr float WallHeight = 4.f;
+	static constexpr int NoPath = 0;
+	static constexpr int PathWithPoints = 1;
+	static constexpr int PathWithLines = 2;
 
 	bool IsFullfiled()const;
 
 	void DrawBounds(sf::RenderTarget& rt);
 
-	void Draw(sf::RenderTarget& rt, bool draw_numbers = true);
+	void Draw(sf::RenderTarget& rt, std::size_t path_drawing_mode = 0);
 
-	void DrawZones(sf::RenderTarget &rt, sf::Vector2i mouse_position, bool zone, bool full_zone, bool points, bool cell);
+	void DrawZones(sf::RenderTarget &rt, sf::Vector2i mouse_position, bool for_all_cells, bool zone, bool full_zone, bool points, bool cell);
 
 	void SaveToFile(const std::string& filename);
 

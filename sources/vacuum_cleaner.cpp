@@ -37,11 +37,11 @@ void VacuumCleaner::Draw(sf::RenderTarget& rt, sf::Color color)const {
 		auto sensor_direction = Math::RotationToDirection(sensor.Rotation + Rotation);
 		auto start = Position + sensor_direction * CleanerRadius;
 		auto end = start + sensor_direction * CleanerRayLength;
-		Render::DrawLine(start, end, 3, rt, sf::Color::Red);
+		Render::DrawLine(rt, start, end, 3, sf::Color::Red);
 	}
 
 	auto start = Position + Direction() * CleanerRadius;
-	Render::DrawLine(start, start + Direction() * CleanerRayLength, 3, rt, sf::Color::Green);
+	Render::DrawLine(rt, start, start + Direction() * CleanerRayLength, 3, sf::Color::Green);
 }
 
 sf::Vector2f VacuumCleaner::Direction()const {

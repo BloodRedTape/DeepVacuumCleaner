@@ -2,7 +2,7 @@
 #include "render.hpp"
 #include "config.hpp"
 #include "imgui.h"
-
+#include "imgui.hpp"
 
 bool InputText(const char* label, std::string& buffer, ImGuiInputTextFlags flags = 0) {
     return ImGui::InputText(label, buffer.data(), buffer.size() + 1, flags | ImGuiInputTextFlags_CallbackResize, [](ImGuiInputTextCallbackData *data)->int {
@@ -52,19 +52,14 @@ void MapEditor::OnImGui() {
 
 	ImGui::Begin("Map Editor");
 
+
+	ImGui::Text("Framerate: %f", ImGui::GetIO().Framerate);
+	ImGui::Text("DrawCalls: %d", (int)Render::s_DrawcallsCount);
+	ImGui::Separator();
+
 	ImGui::Text("Walls: %d", m_Env.Walls.size());
 	ImGui::Text("Points: %d", m_Env.Path.size());
 
-	ImGui::Checkbox("Draw Bounds", &m_DrawBounds);
-	ImGui::Checkbox("Draw Grid Decomposition", &m_DrawGridDecomposition);
-	ImGui::Checkbox("Draw Path Numbers", &m_DrawNumbers);
-	ImGui::InputInt2("Grid Cell Size", &m_GridCellSize.x);
-	ImGui::Text("Vacuum size in cells: %d", (int)CleanerRadius * 2 / std::min(m_GridCellSize.x, m_GridCellSize.y));
-	ImGui::InputInt("Steps", &m_Steps);
-
-	if (ImGui::Button("Rebuild"))
-		m_Env.AutogeneratePath(m_GridCellSize, m_StartPosition, m_Steps);
-	
 	if(ImGui::Button("Clear"))
 		m_Env.Clear();
 
@@ -85,6 +80,30 @@ void MapEditor::OnImGui() {
 			m_MapFilename = file.path().stem().string();
 		}
 	}
+	ImGui::Separator();
+
+	ImGui::SimpleCombo("Path Drawing mode", &m_PathDrawingMode, {"None", "Points", "Line"});
+	ImGui::Checkbox("Draw Bounds", &m_DrawBounds);
+	ImGui::Checkbox("Draw Grid Decomposition", &m_DrawGridDecomposition);
+	ImGui::InputInt2("Grid Cell Size", &m_GridCellSize.x);
+	ImGui::Text("Vacuum size in cells: %d", (int)CleanerRadius * 2 / std::min(m_GridCellSize.x, m_GridCellSize.y));
+	ImGui::InputInt("Steps", &m_Steps);
+
+	if (ImGui::Button("Rebuild"))
+		m_Env.AutogeneratePath(m_GridCellSize, m_StartPosition, m_Steps);
+
+	ImGui::Separator();
+
+	ImGui::Checkbox("Coverage path planning debug", &m_CoveragePathDebugging);
+
+	if (m_CoveragePathDebugging) {
+		ImGui::SimpleCombo("Draw About", &m_ForAllCells, "Whole Map", "Cell under cursor");
+		ImGui::Checkbox("ForAllCells", &m_ForAllCells);
+		ImGui::Checkbox("DrawCurrentCell", &m_DrawCurrentCell);
+		ImGui::Checkbox("DrawZoneDecomposition", &m_DrawZoneDecomposition);
+		ImGui::Checkbox("DrawFullZoneDecomposition", &m_DrawFullZoneDecomposition);
+		ImGui::Checkbox("DrawCoveragePoints", &m_DrawCoveragePoints);
+	}
 
 	ImGui::End();
 }
@@ -97,13 +116,21 @@ void MapEditor::Render(sf::RenderTarget& rt) {
 	if(m_DrawGridDecomposition)
 		m_Env.Grid.Draw(rt);
 
-	m_Env.DrawZones(rt, sf::Vector2i(m_Window.mapPixelToCoords(sf::Vector2i(MousePosition()))), false, true, true, true);
-	m_Env.Draw(rt, m_DrawNumbers);
+	m_Env.DrawZones(
+		rt, 
+		sf::Vector2i(m_Window.mapPixelToCoords(sf::Vector2i(MousePosition()))), 
+		m_CoveragePathDebugging && m_ForAllCells,
+		m_CoveragePathDebugging && m_DrawZoneDecomposition, 
+		m_CoveragePathDebugging && m_DrawFullZoneDecomposition, 
+		m_CoveragePathDebugging && m_DrawCoveragePoints, 
+		m_CoveragePathDebugging && m_DrawCurrentCell
+	);
+	m_Env.Draw(rt, m_PathDrawingMode);
 
 
 	if (m_WallBegin.has_value()) {
 		auto point = sf::Vector2i(m_Window.mapPixelToCoords(sf::Vector2i(MousePosition())));
-		Render::DrawLine(sf::Vector2f(m_WallBegin.value()), sf::Vector2f(point), WallHeight, rt);
+		Render::DrawLine(rt, m_WallBegin.value(), point, WallHeight);
 	}
 
 	m_Cleaner.Draw(rt);

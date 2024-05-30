@@ -50,7 +50,7 @@ public:
 				std::cout << "Saved\n";
 			}
 		}
-
+#if 0
 		if (e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::Key::Space) {
 			m_IsPaused = !m_IsPaused;
 		}
@@ -58,6 +58,7 @@ public:
 		if (e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::Key::D) {
 			m_IsDebug = !m_IsDebug;
 		}
+#endif
 	}
 
 	virtual void Render(sf::RenderTarget& rt) override{
@@ -110,11 +111,11 @@ int main()
 {
 	srand(time(0));
 
-	std::filesystem::current_path("../../../../run_tree");
+	std::filesystem::current_path("../../../run_tree");
 
 	WriteEntireFile("test/file.txt", "Hello");
 	
-	MakeApp<EvolutionTrainingApp>({1920, 1080})->Run();
+	MakeApp<MapEditor>({1920, 1080})->Run();
 	
 	return 0;
 }

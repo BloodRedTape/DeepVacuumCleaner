@@ -9,8 +9,8 @@ NeuralNetworkAgent::NeuralNetworkAgent(NeuralNetwork &&nn):
 
 NeuralNetworkAgent::NeuralNetworkAgent(int num_sensors):
 	m_NN(
-		{num_sensors + 3, 64, 64, 18, 2},
-		{"None", "None", "Tanh", "Tanh", "Tanh"}
+		{num_sensors + 3, 32, 20, 10, 2},
+		{"None", "Tanh", "None", "Tanh", "Tanh"}
 	)
 {}
 
@@ -49,7 +49,7 @@ sf::Vector2f NeuralNetworkAgent::Iterate(const VacuumCleaner &cleaner, const Env
 	float forward  = output[0][0];
 	float rotation = output[0][1];
 
-	float distance_to_goal = (cleaner.Position - goal).length();
+	float distance_to_goal = (goal - cleaner.Position).length();
 
 	m_TotalDistanceTraveled += forward;
 	m_CurrentDistanceToGoal = distance_to_goal;

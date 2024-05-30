@@ -29,21 +29,42 @@ EvolutionTraining::EvolutionTraining(std::optional<std::string> filepath) {
 	}
 
 	for (auto& p : m_Population) {
-		p.Reset(m_Env, m_StartingPosition);
+		p.Reset(m_Env, (sf::Vector2f)m_Env.StartPosition);
 	}
 }
 
 void EvolutionTraining::Tick(float dt) {
 	m_IterationsNumber++;
 
+	SortPopulation();
+	auto best_fitness = m_Population.front().FitnessFunction(m_Env);
+
+	auto h = std::max_element(m_Population.begin(), m_Population.end(), [](auto &l, auto &r){
+		return l.CurrentGoal() < r.CurrentGoal();
+	});
+
+	if(h->CurrentGoal() > m_HighestGoal) {
+		m_HighestGoal = h->CurrentGoal();
+		m_BestOfEachGoal.push_back(*h);
+		SaveBest();
+	}
+
+	if(best_fitness > m_HighestFitness){
+		m_HighestFitness = best_fitness;
+		if(h != m_Population.begin())
+			m_BestOfEachGoal.push_back(m_Population.front());
+		SaveBest();
+	}
+
+
 	std::vector<int> die;
 	
 	for (int i = 0; i<m_Population.size(); i++) {
-		auto &agent = m_Population[i];
+		VacuumCleanerOperator &agent = m_Population[i];
 
 		agent.Iterate(m_Env, dt, m_IterationsNumber);
 
-		if(agent.StandStill() > StandStillToDie || agent.NumberFailure() || agent.HasCrashed(m_Env) || agent.Agent().HasNotTraveled())
+		if(agent.StandStill() > StandStillToDie || agent.NumberFailure() || agent.HasCrashed(m_Env) || agent.Agent().HasNotTraveled() || agent.Agent().TooFarGone())
 			die.push_back(i);
 	}
 
@@ -70,31 +91,10 @@ void EvolutionTraining::NextGeneration() {
 	assert(m_Population.size() >= 2);
 
 	m_Generation++;
-
-	auto h = std::max_element(m_Population.begin(), m_Population.end(), [](auto &l, auto &r){
-		return l.CurrentGoal() < r.CurrentGoal();
-	})->CurrentGoal();
 	
 	Println("New Population");
 	Println("BestOfEachGoal: %", m_BestOfEachGoal.size());
 
-	SortPopulation();
-	auto best_fitness = m_Population.front().FitnessFunction(m_Env);
-
-	if(best_fitness > m_HighestFitness || h > m_HighestGoal){
-		m_BestOfEachGoal.push_back(m_Population.front());
-	}
-
-	if(h > m_HighestGoal){
-		m_HighestGoal = h;
-		SaveBest();
-	}
-
-	if (best_fitness > m_HighestFitness) {
-		m_HighestFitness = best_fitness;
-		SaveBest();
-	}
-	
 	std::copy(m_BestOfEachGoal.begin(), m_BestOfEachGoal.end(), std::back_inserter(m_Population));
 
 	SortPopulation();
@@ -108,7 +108,7 @@ void EvolutionTraining::NextGeneration() {
 	m_Population = std::move(new_population);
 
 	for (auto& p : m_Population)
-		p.Reset(m_Env, m_StartingPosition);
+		p.Reset(m_Env, sf::Vector2f(m_Env.StartPosition));
 }
 
 void EvolutionTraining::SortPopulation() {
@@ -130,7 +130,7 @@ std::vector<VacuumCleanerOperator> EvolutionTraining::PopulationFromSorted(const
 	for (auto& op : new_population) {
 		if (GetRandom<float>(0, 1) < GenofondMutationChance)
 			op = VacuumCleanerOperator::Mutate(op, MutationChance, MutationRange);
-		op.Reset(m_Env, m_StartingPosition);
+		op.Reset(m_Env, sf::Vector2f(m_Env.StartPosition));
 	}
 
 	for(int i = 0; i<count; i++){

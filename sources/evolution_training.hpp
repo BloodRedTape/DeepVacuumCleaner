@@ -7,8 +7,6 @@ class EvolutionTraining {
 	std::vector<VacuumCleanerOperator> m_BestOfEachGoal;
 	Environment m_Env;
 
-	sf::Vector2f m_StartingPosition{0, 0};
-
 	size_t m_Generation = 0;
 	size_t m_IterationsNumber = 0;
 

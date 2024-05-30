@@ -21,17 +21,8 @@ void VacuumCleaner::Move(float forward, float rotate) {
 }
 
 void VacuumCleaner::Draw(sf::RenderTarget& rt, sf::Color color)const {
-	sf::CircleShape shape(CleanerRadius);
 
-	shape.setPosition(Position);
-	shape.setFillColor(color);
-
-	shape.setOutlineColor(sf::Color::White);
-	shape.setOutlineThickness(3);
-	shape.setOrigin({CleanerRadius, CleanerRadius});
-
-	rt.draw(shape);
-
+	Render::DrawCircle(rt, Position, CleanerRadius, color, 3, sf::Color::White);
 	
 	for (auto sensor : Sensors) {
 		auto sensor_direction = Math::RotationToDirection(sensor.Rotation + Rotation);
@@ -59,11 +50,8 @@ void VacuumCleaner::DrawIntersections(sf::RenderTarget& rt, const Environment &e
 
 		float intersect = Wall::TraceNearestObstacle(start, direction, env.Walls);
 			
-		float radius = 5;
-		sf::CircleShape shape(radius);
-		shape.setFillColor(sf::Color::Red);
-		shape.setPosition(start + direction * intersect);
-		shape.setOrigin({radius, radius});
-		rt.draw(shape);
+		const float radius = 5;
+
+		Render::DrawCircle(rt, start + direction * intersect, radius, sf::Color::Red);
 	}
 }

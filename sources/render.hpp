@@ -43,12 +43,14 @@ namespace Render{
 	}
 
     template<typename T>
-    inline void DrawCircle(sf::RenderTarget& rt, sf::Vector2<T> position, float radius, sf::Color color = sf::Color::White) {
+    inline void DrawCircle(sf::RenderTarget& rt, sf::Vector2<T> position, float radius, sf::Color color = sf::Color::White, float outline = 0.f, sf::Color outline_color = sf::Color::White) {
 		static sf::CircleShape shape;
         shape.setRadius(radius);
 		shape.setPosition(sf::Vector2f(position));
 		shape.setOrigin({radius, radius});
         shape.setFillColor(color);
+        shape.setOutlineThickness(outline);
+        shape.setOutlineColor(outline_color);
 		rt.draw(shape);
         s_DrawcallsCount++;
     }

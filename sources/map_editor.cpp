@@ -59,7 +59,7 @@ void MapEditor::OnImGui() {
 	ImGui::Checkbox("Draw Grid Decomposition", &m_DrawGridDecomposition);
 	ImGui::Checkbox("Draw Path Numbers", &m_DrawNumbers);
 	ImGui::InputInt2("Grid Cell Size", &m_GridCellSize.x);
-	ImGui::Text("Vacuum size in cells: %d", (int)VacuumCleaner::Radius * 2 / std::min(m_GridCellSize.x, m_GridCellSize.y));
+	ImGui::Text("Vacuum size in cells: %d", (int)CleanerRadius * 2 / std::min(m_GridCellSize.x, m_GridCellSize.y));
 	ImGui::InputInt("Steps", &m_Steps);
 
 	if (ImGui::Button("Rebuild"))
@@ -96,6 +96,8 @@ void MapEditor::Render(sf::RenderTarget& rt) {
 		m_Env.DrawBounds(rt);
 	if(m_DrawGridDecomposition)
 		m_Env.Grid.Draw(rt);
+
+	m_Env.DrawZones(rt, sf::Vector2i(m_Window.mapPixelToCoords(sf::Vector2i(MousePosition()))), false, true, true, true);
 	m_Env.Draw(rt, m_DrawNumbers);
 
 

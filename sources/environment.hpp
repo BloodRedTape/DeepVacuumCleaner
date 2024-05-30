@@ -47,11 +47,17 @@ struct GridDecomposition {
 
 	bool IsInBounds(sf::Vector2i cell_index)const;
 
+	bool IsOccupied(sf::IntRect rect)const;
+
 	bool IsOccupiedOrVisited(sf::Vector2i dst, const std::vector<sf::Vector2i>& visited)const;
 
 	bool HasObstacles(sf::Vector2i src, sf::Vector2i step, int count)const;
 
-	sf::Vector2i CellsCount()const;
+	sf::Vector2i GridPosition()const{ return Bounds.getPosition(); }
+
+	sf::FloatRect CellRectToAbsolute(sf::IntRect rect)const{ return {sf::Vector2f(GridPosition() + rect.getPosition().cwiseMul(CellSize)), sf::Vector2f(rect.getSize().cwiseMul(CellSize))}; }
+
+	sf::Vector2i Size()const;
 
 	static GridDecomposition Make(sf::Vector2i cell_size, sf::IntRect bounds, const std::vector<Wall> &walls);
 };
@@ -70,6 +76,8 @@ struct Environment {
 	void DrawBounds(sf::RenderTarget& rt);
 
 	void Draw(sf::RenderTarget& rt, bool draw_numbers = true);
+
+	void DrawZones(sf::RenderTarget &rt, sf::Vector2i mouse_position, bool zone, bool full_zone, bool points, bool cell);
 
 	void SaveToFile(const std::string& filename);
 

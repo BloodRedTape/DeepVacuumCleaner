@@ -40,6 +40,7 @@ namespace Render{
         shape.setRadius(radius);
 		shape.setPosition((sf::Vector2f)position);
 		shape.setOrigin({radius, radius});
+        shape.setFillColor(color);
 		rt.draw(shape);
     }
 	

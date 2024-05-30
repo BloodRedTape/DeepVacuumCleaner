@@ -4,8 +4,10 @@
 #include "render.hpp"
 #include <fstream>
 #include <SFML/Graphics.hpp>
+#include <SFML/Window/Mouse.hpp>
 #include "config.hpp"
 #include "bsl/log.hpp"
+#include <set>
 
 DEFINE_LOG_CATEGORY(Env);
 
@@ -67,7 +69,7 @@ sf::IntRect GridDecomposition::GetCellByIndex(sf::Vector2i index)const{
 
 sf::Vector2i GridDecomposition::PositionToCellIndex(sf::Vector2i position)const{
 	if(!Bounds.contains(position))
-		return (assert(false), sf::Vector2i(-1, -1));
+		return sf::Vector2i(-1, -1);
 
 	return (position - Bounds.getPosition()).cwiseDiv(CellSize);
 }
@@ -81,13 +83,25 @@ bool GridDecomposition::IsOccupied(sf::Vector2i cell_index)const {
 }
 
 bool GridDecomposition::IsInBounds(sf::Vector2i index)const{
-	return index.x < CellsCount().x
-		&& index.y < CellsCount().y
+	return index.x < Size().x
+		&& index.y < Size().y
 		&& index.x >= 0
 		&& index.y >= 0;
-};
+}
 
-sf::Vector2i GridDecomposition::CellsCount()const {
+bool GridDecomposition::IsOccupied(sf::IntRect rect) const{
+	for(int x = 0; x<rect.getSize().x; x++) {
+		for (int y = 0; y < rect.getSize().y; y++) {
+			sf::Vector2i grid_cell = rect.getPosition() + sf::Vector2i(x, y);
+			
+			if(IsOccupied(grid_cell))
+				return true;
+		}
+	}
+	return false;
+}
+
+sf::Vector2i GridDecomposition::Size()const {
 	return Bounds.getSize().cwiseDiv(CellSize);
 }
 
@@ -104,6 +118,180 @@ bool GridDecomposition::HasObstacles(sf::Vector2i src, sf::Vector2i step, int co
 	return false;
 }
 
+static int &At(sf::Vector2i& vec, int axis){
+	if (axis == 0)
+		return vec.x;
+	if (axis == 1)
+		return vec.y;
+	assert(false);
+	return vec.x;
+};
+
+static const int &At(const sf::Vector2i& vec, int axis){
+	if (axis == 0)
+		return vec.x;
+	if (axis == 1)
+		return vec.y;
+	assert(false);
+	return vec.x;
+};
+
+
+static bool IsRectInside(const sf::IntRect& inner, const sf::IntRect& outer) {
+    return (
+        inner.left >= outer.left &&
+        inner.top >= outer.top &&
+        inner.left + inner.width <= outer.left + outer.width &&
+        inner.top + inner.height <= outer.top + outer.height
+    );
+}
+
+struct PathBuilder {
+	GridDecomposition &Grid;
+	const std::size_t CoverageSize = 3;
+	const sf::Vector2i CoverageGridSize;
+
+	PathBuilder(GridDecomposition &grid, std::size_t coverage_size = 3):
+		Grid(grid),
+		CoverageSize(coverage_size),
+		CoverageGridSize(
+			std::ceil(grid.Bounds.getSize().x / (Grid.CellSize.x * float(coverage_size))),
+			std::ceil(grid.Bounds.getSize().y / (Grid.CellSize.y * float(coverage_size)))
+		)
+	{}
+
+	std::vector<sf::Vector2i> MakePath()const {
+		return {};
+	}
+
+	sf::Vector2i GridToCoverageCell(sf::Vector2i grid_index)const{
+		return grid_index / int(CoverageSize);
+	}
+
+	sf::IntRect CoverageCellRect(sf::Vector2i coverage_index)const{
+		return {coverage_index * int(CoverageSize), sf::Vector2i(CoverageSize, CoverageSize)};
+	}
+
+	sf::IntRect Extend(sf::IntRect rect, int direction, int axis)const {
+		assert(direction == 1 || direction == -1);
+		assert(axis == 0 || axis == 1);
+
+
+		sf::Vector2i min = rect.getPosition();
+		sf::Vector2i max = rect.getPosition() + rect.getSize();
+
+		At(min, axis) = std::min(At(min, axis), At(min, axis) + direction);
+		At(max, axis) = std::max(At(max, axis), At(max, axis) + direction);
+
+		return {min, max - min};
+	}
+
+	bool TryExtendInCoverageCell(sf::IntRect& rect, int direction, int axis)const{
+		sf::IntRect new_rect = Extend(rect, direction, axis);
+		
+		if(Grid.IsOccupied(new_rect))
+			return false;
+		
+		auto coverage_cell = CoverageCellRect(GridToCoverageCell(rect.getPosition()));
+
+		//is out of bounds
+		if(!IsRectInside(new_rect, coverage_cell))
+			return false;
+		
+		rect = new_rect;
+		return true;
+	}
+
+	sf::IntRect ExtendAsMuchInCoverageCell(sf::IntRect rect)const {
+		while(TryExtendInCoverageCell(rect, 1, 0));
+		while(TryExtendInCoverageCell(rect,-1, 0));
+		while(TryExtendInCoverageCell(rect, 1, 1));
+		while(TryExtendInCoverageCell(rect,-1, 1));
+
+		return rect;
+	}
+
+
+	std::optional<sf::IntRect> MakeZoneFrom(sf::Vector2i point)const{
+		if(Grid.IsOccupied(point))
+			return std::nullopt;
+
+		return ExtendAsMuchInCoverageCell({point, {1, 1}});
+	}
+
+	std::vector<sf::IntRect> MakeZoneDecomposition(sf::Vector2i coverage_cell)const {
+		sf::IntRect coverage_cell_rect = CoverageCellRect(coverage_cell);
+	
+		std::vector<sf::IntRect> zones;
+
+		for(int x = 0; x<coverage_cell_rect.getSize().x; x++) {
+			for (int y = 0; y < coverage_cell_rect.getSize().y; y++) {
+				sf::Vector2i grid_cell = coverage_cell_rect.getPosition() + sf::Vector2i(x, y);
+
+				auto zone = MakeZoneFrom(grid_cell);
+
+				if(zone.has_value() && std::find(zones.begin(), zones.end(), zone.value()) == zones.end())
+					zones.push_back(zone.value());
+			}
+		}
+
+		return zones;
+	};
+
+	bool TryExtendUntilFullCoverage(sf::IntRect& rect, int direction, int axis)const{
+		sf::IntRect new_rect = Extend(rect, direction, axis);
+		
+		if(Grid.IsOccupied(new_rect))
+			return false;
+		
+		if(At(new_rect.getSize(), axis) > CoverageSize)
+			return false;
+		
+		rect = new_rect;
+		return true;
+	}
+
+
+	std::optional<sf::IntRect> TryExtendUntilFullCoverage(sf::IntRect rect)const {
+		while(TryExtendUntilFullCoverage(rect, 1, 0));
+		while(TryExtendUntilFullCoverage(rect,-1, 0));
+		while(TryExtendUntilFullCoverage(rect, 1, 1));
+		while(TryExtendUntilFullCoverage(rect,-1, 1));
+
+		if(rect.getSize() != sf::Vector2i(CoverageSize, CoverageSize))
+			return std::nullopt;
+
+		return rect;
+	}
+
+	std::vector<sf::IntRect> ToFullCoverageZones(const std::vector<sf::IntRect> &zones)const
+	{
+		std::vector<sf::IntRect> result;
+
+		for (auto zone : zones) {
+			auto full = TryExtendUntilFullCoverage(zone);
+
+			if(full.has_value())
+				result.push_back(full.value());
+		}
+
+		return result;
+	}
+
+	std::vector<sf::Vector2i> MakeVisitPoints(sf::Vector2i coverage_cell)const{
+		auto full_coverage_zones = ToFullCoverageZones(MakeZoneDecomposition(coverage_cell));
+
+		std::vector<sf::Vector2i> points;
+
+		for (auto zone : full_coverage_zones) {
+			sf::IntRect absoule{zone.getPosition().cwiseMul(Grid.CellSize), zone.getSize().cwiseMul(Grid.CellSize)};
+
+			points.push_back(absoule.getCenter());
+		}
+		return points;
+	}
+};
+
 std::vector<sf::Vector2i> GridDecomposition::BuildPath(sf::Vector2i start_position, int step)const {
 	if (!Bounds.contains(start_position)) {
 		LogEnv(Error, "Start is not in the bounds");
@@ -117,7 +305,7 @@ std::vector<sf::Vector2i> GridDecomposition::BuildPath(sf::Vector2i start_positi
 		return {};
 	}
 
-	LogEnv(Error, "Building path for Grid: % | % = %", CellsCount().x, CellsCount().y, CellsCount().x * CellsCount().y);
+	LogEnv(Error, "Building path for Grid: % | % = %", Size().x, Size().y, Size().x * Size().y);
 
 	std::vector<sf::Vector2i> index_path;
 	
@@ -206,6 +394,67 @@ void Environment::Draw(sf::RenderTarget& rt, bool draw_numbers) {
 	for (const auto &wall : Walls) {
 		Render::DrawLine(sf::Vector2f(wall.Start), sf::Vector2f(wall.End), WallHeight, rt);
 	}
+}
+void Environment::DrawZones(sf::RenderTarget& rt, sf::Vector2i mouse_position, bool zone, bool full_zone, bool points, bool cell_outline) {
+
+	auto cell = Grid.PositionToCellIndex(mouse_position);
+
+	if(cell.x == -1 || cell.y == -1)
+		return;
+
+	PathBuilder builder(Grid, 4);
+
+	if(zone){
+		auto zones = builder.MakeZoneDecomposition(builder.GridToCoverageCell(cell));
+
+		for (auto zone : zones) {
+			sf::RectangleShape rect;
+			rect.setSize(Grid.CellRectToAbsolute(zone).getSize());
+			rect.setPosition(Grid.CellRectToAbsolute(zone).getPosition());
+
+			rect.setFillColor(sf::Color(255, 255, 255, 20));
+			rect.setOutlineThickness(2);
+			rect.setOutlineColor(sf::Color::Cyan);
+			rt.draw(rect);
+		}
+
+	}
+	if (full_zone) {
+		auto zones = builder.MakeZoneDecomposition(builder.GridToCoverageCell(cell));
+
+		for (auto zone : builder.ToFullCoverageZones(zones)) {
+			sf::RectangleShape rect;
+			rect.setSize(Grid.CellRectToAbsolute(zone).getSize());
+			rect.setPosition(Grid.CellRectToAbsolute(zone).getPosition());
+
+			rect.setFillColor(sf::Color(255, 255, 255, 20));
+			rect.setOutlineThickness(2);
+			rect.setOutlineColor(sf::Color::Green);
+			rt.draw(rect);
+		}
+	}
+
+	if (points) {
+		auto points = builder.MakeVisitPoints(builder.GridToCoverageCell(cell));
+
+		for (auto point: points)
+			Render::DrawCircle(sf::Vector2f(Grid.Bounds.getPosition() + point), 5.f, rt, sf::Color::Green);
+	}
+
+	if (cell_outline) {
+		auto coverage_rect = builder.CoverageCellRect(builder.GridToCoverageCell(cell));
+
+		sf::RectangleShape rect;
+		rect.setSize(Grid.CellRectToAbsolute(coverage_rect).getSize());
+		rect.setPosition(Grid.CellRectToAbsolute(coverage_rect).getPosition());
+
+		rect.setFillColor(sf::Color(255, 255, 255, 0));
+		rect.setOutlineThickness(1);
+		rect.setOutlineColor(sf::Color::Magenta);
+		rt.draw(rect);
+	}
+
+	//Render::DrawString(sf::Vector2f(mouse_position) + sf::Vector2f(0, 30), Format("%\n% %", zones.size(), cell.x, cell.y), rt);
 }
 
 void Environment::SaveToFile(const std::string& filename) {

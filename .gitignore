@@ -3,3 +3,6 @@ build
 .vs
 .vscode
 run_tree
+
+CMakeSettings.json
+CMakeUserPresets.json

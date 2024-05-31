@@ -8,6 +8,23 @@ namespace Render{
     
     extern std::size_t s_DrawcallsCount;
 
+    class GeometryBatch: public sf::Drawable, public sf::Transformable {
+    private:
+        sf::VertexArray m_Vertices;
+        mutable sf::VertexBuffer m_Buffer;
+    public:
+        GeometryBatch();
+
+        void Rect(const sf::FloatRect& rect, const sf::Color& color, const sf::Transform &transform);
+
+        void Circle(const sf::Vector2f& center, float radius, const sf::Color& color, int pointCount = 16);
+
+        void Clear();
+
+    private:
+        virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
+    };
+
     template<typename T>
 	inline void DrawLine(sf::RenderTarget &rt, sf::Vector2<T> start, sf::Vector2<T> end, float thichness, sf::Color color = sf::Color::White) {
 		auto direction = sf::Vector2f(end - start);
@@ -44,7 +61,7 @@ namespace Render{
 
     template<typename T>
     inline void DrawCircle(sf::RenderTarget& rt, sf::Vector2<T> position, float radius, sf::Color color = sf::Color::White, float outline = 0.f, sf::Color outline_color = sf::Color::White) {
-		static sf::CircleShape shape;
+		static sf::CircleShape shape(0, 16);
         shape.setRadius(radius);
 		shape.setPosition(sf::Vector2f(position));
 		shape.setOrigin({radius, radius});

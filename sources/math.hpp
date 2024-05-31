@@ -15,7 +15,11 @@ namespace Math{
 	inline float None(float x) {
 		return x;
 	}
-
+	
+	template<typename T>
+	T Sign(T value) {
+		return value >= 0 ? 1 : -1;
+	}
 
 	constexpr sf::Vector2f Forward{1.f, 0};
 

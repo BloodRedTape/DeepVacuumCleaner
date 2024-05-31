@@ -8,6 +8,7 @@
 #include "config.hpp"
 #include "bsl/log.hpp"
 #include <set>
+#include <cmath>
 
 DEFINE_LOG_CATEGORY(Env);
 
@@ -109,7 +110,9 @@ bool GridDecomposition::IsOccupied(sf::IntRect rect) const{
 }
 
 sf::Vector2i GridDecomposition::Size()const {
-	return Bounds.getSize().cwiseDiv(CellSize);
+	if(Bounds.getSize().x && Bounds.getSize().y)
+		return Bounds.getSize().cwiseDiv(CellSize);
+	return {0, 0};
 }
 
 bool GridDecomposition::IsOccupiedOrVisited(sf::Vector2i dst, const std::vector<sf::Vector2i>& visited)const{
@@ -298,27 +301,36 @@ struct PathBuilder {
 		}
 		return points;
 	}
+
+	std::vector<sf::Vector2i> TraceLine(sf::Vector2i local_src, sf::Vector2i local_dst)const {
+		std::vector<sf::Vector2i> result;
+
+		for (int x = 0; x < Grid.Size().x; x++) {
+			for (int y = 0; y < Grid.Size().y; y++) {
+				sf::FloatRect cell = (sf::FloatRect)Grid.GetCellByIndex({x, y});
+
+				if(Math::LineRectIntersection(sf::Vector2f(Grid.Bounds.getPosition() + local_src), sf::Vector2f(Grid.Bounds.getPosition() + local_dst), cell)){
+					result.push_back({x, y});
+				}
+			}
+		}
+
+		return result;
+	}
 	
 	bool AreDirectlyReachable(sf::Vector2i local_src, sf::Vector2i local_dst)const {
-		sf::Vector2i cell_src = Grid.LocalPositionToCellIndex(local_src);
-		sf::Vector2i cell_dst = Grid.LocalPositionToCellIndex(local_dst);
-
-		sf::Vector2i path = cell_dst - cell_src;
-		
-		for (int x = 0, y = 0; x < path.x; x++) {
-
-
+		for (auto line_cell : TraceLine(local_src, local_dst)) {
 			
-			sf::Vector2i path_cell(x, y);
-
-			auto coverage = TryExtendUntilFullCoverage({path_cell, {1, 1}});
+			auto coverage = TryExtendUntilFullCoverage({line_cell, {1, 1}});
 
 			if(!coverage.has_value())
 				return false;
 		}
-
+		
 		return true;
 	}
+
+
 
 	std::vector<sf::Vector2i> BuildPath(sf::Vector2i start_position)const{
 		if (!Grid.Bounds.contains(start_position)) {
@@ -496,12 +508,20 @@ static void DrawForCell(const PathBuilder& builder, sf::RenderTarget& rt, sf::Ve
 	}
 }
 
-void Environment::DrawZones(sf::RenderTarget& rt, sf::Vector2i mouse_position, bool for_all_cells, bool zone, bool full_zone, bool points, bool cell_outline) {
+void Environment::DrawZones(sf::RenderTarget& rt, sf::Vector2i world_mouse_position, bool for_all_cells, bool zone, bool full_zone, bool points, bool cell_outline) {
 
 	PathBuilder builder(Grid, CoverageSize);
+	
+	bool debug_line_trace = false;
+
+	if(debug_line_trace){
+		for (auto cell : builder.TraceLine(StartPosition - Grid.Bounds.getPosition(), world_mouse_position - Grid.Bounds.getPosition())) {
+			Render::DrawRect(rt, Grid.Bounds.getPosition() + cell.cwiseMul(Grid.CellSize), Grid.CellSize);
+		}
+	}
 
 	if(!for_all_cells){
-		auto cell = Grid.PositionToCellIndex(mouse_position);
+		auto cell = Grid.PositionToCellIndex(world_mouse_position);
 
 		if(cell.x == -1 || cell.y == -1)
 			return;

@@ -69,10 +69,7 @@ sf::IntRect GridDecomposition::GetCellByIndex(sf::Vector2i index)const{
 }
 
 sf::Vector2i GridDecomposition::PositionToCellIndex(sf::Vector2i position)const{
-	if(!Bounds.contains(position))
-		return sf::Vector2i(-1, -1);
-
-	return (position - Bounds.getPosition()).cwiseDiv(CellSize);
+	return LocalPositionToCellIndex(position - Bounds.getPosition());
 }
 
 sf::Vector2i GridDecomposition::LocalPositionToCellIndex(sf::Vector2i position) const{
@@ -156,6 +153,29 @@ static bool IsRectInside(const sf::IntRect& inner, const sf::IntRect& outer) {
     );
 }
 
+struct AxisAlignedDirection2D{
+	int Direction = 0;
+	int Axis = 0;
+
+	AxisAlignedDirection2D(int axis, int direction){
+		Direction = direction;
+		Axis = axis;
+
+		assert(direction == 1 || direction == -1);
+		assert(axis == 0 || direction == 2);
+	}
+
+	static std::optional<AxisAlignedDirection2D> Make(sf::Vector2i vector) {
+		if (vector.x == 0 && std::abs(vector.y) == 1) {
+			return AxisAlignedDirection2D(1, vector.y);
+		}
+		if (vector.y == 0 && std::abs(vector.x) == 1) {
+			return AxisAlignedDirection2D(0, vector.x);
+		}
+		return std::nullopt;
+	}
+};
+
 struct PathBuilder {
 	GridDecomposition &Grid;
 	const std::size_t CoverageSize = 3;
@@ -180,6 +200,13 @@ struct PathBuilder {
 
 	sf::IntRect CoverageCellRect(sf::Vector2i coverage_index)const{
 		return {coverage_index * int(CoverageSize), sf::Vector2i(CoverageSize, CoverageSize)};
+	}
+
+	bool IsInBounds(sf::Vector2i coverage_index)const {
+		return coverage_index.x >= 0
+			&& coverage_index.x < CoverageGridSize.x
+			&& coverage_index.y >= 0
+			&& coverage_index.y < CoverageGridSize.y;
 	}
 
 	sf::IntRect Extend(sf::IntRect rect, int direction, int axis)const {
@@ -288,7 +315,7 @@ struct PathBuilder {
 		return result;
 	}
 	
-	//Visit points are in world dimension of grid coordinates
+	//Visit points are in world_local
 	std::vector<sf::Vector2i> MakeVisitPoints(sf::Vector2i coverage_cell)const{
 		auto full_coverage_zones = ToFullCoverageZones(MakeZoneDecomposition(coverage_cell));
 
@@ -332,17 +359,47 @@ struct PathBuilder {
 
 
 
-	std::vector<sf::Vector2i> BuildPath(sf::Vector2i start_position)const{
-		if (!Grid.Bounds.contains(start_position)) {
-			LogEnv(Error, "Start is not in the bounds");
+	std::vector<sf::Vector2i> GetSortedReachableVisitPointsNotVisited(sf::Vector2i src_coverage, sf::Vector2i dst_coverage, sf::Vector2i src_local, const std::vector<sf::Vector2i> &visited)const{
+		sf::Vector2i direction = src_coverage - dst_coverage;
+		auto axis_aligned_direction = AxisAlignedDirection2D::Make(direction);
+
+		if(!axis_aligned_direction){
+			Println("Can't make direction from (%, %)", direction.x, direction.y);
 			return {};
 		}
 
-		start_position -= Grid.Bounds.getPosition();
+		std::vector<sf::Vector2i> reachable_visit_points;
 
-		std::vector<sf::Vector2i> path;
-		path.push_back(start_position);
+		for (auto point : MakeVisitPoints(dst_coverage)) {
+			
+			if(!AreDirectlyReachable(src_local, point))
+				continue;
+
+			if(std::find(visited.begin(), visited.end(), point) != visited.end())
+				continue;
+
+			reachable_visit_points.push_back(point);
+		}
+
+		auto Compare = [dir = axis_aligned_direction.value()](sf::Vector2i left, sf::Vector2i right) {
+			return At(left, dir.Axis) * dir.Direction < At(right, dir.Axis) * dir.Direction;
+		};
 		
+		std::sort(reachable_visit_points.begin(), reachable_visit_points.end(), Compare);
+		
+		return reachable_visit_points;
+	}
+
+	static std::array<sf::Vector2i, 4> MakeRelativeDirectionsList(sf::Vector2i current) {
+		return {
+			current,
+			{current.y, current.x},
+			{-current.y, -current.x},
+			-current
+		};
+	}
+
+	std::vector<sf::Vector2i> BuildPath(sf::Vector2i start_position)const{
 		static const sf::Vector2i directions[] = {
 			{ 0, 1},
 			{ 1, 0},
@@ -350,20 +407,58 @@ struct PathBuilder {
 			{-1, 0},
 		};
 
-		sf::Vector2i current_direction = directions[0];
-		
-		for(;;) {
-			auto local_position = path.back();
-			auto cell_index = Grid.LocalPositionToCellIndex(local_position);
-			assert(cell_index.x != -1 && cell_index.y != -1);
 
-			sf::Vector2i current_coverage_cell = GridToCoverageCell(cell_index);
-			
-			std::vector<sf::Vector2i> visit_points = MakeVisitPoints(current_coverage_cell);
-
-			break;
+		if (!Grid.Bounds.contains(start_position)) {
+			LogEnv(Error, "Start is not in the bounds");
+			return {};
 		}
 
+		sf::Vector2i local_start = start_position - Grid.Bounds.getPosition();
+		sf::Vector2i start_cell = Grid.LocalPositionToCellIndex(local_start);
+
+		if(start_cell.x == -1)
+			return {};
+
+		sf::Vector2i start_coverage = GridToCoverageCell(start_cell);
+
+
+		sf::Vector2i prev_coverage = start_coverage + sf::Vector2i(0, 1);
+		sf::Vector2i src_coverage = start_coverage;
+
+		std::vector<sf::Vector2i> path;
+		path.push_back(local_start);
+		
+		for(;;) {
+			auto src_local = path.back();
+			
+			sf::Vector2i coverage_direction = src_coverage - prev_coverage;
+
+			sf::Vector2i dst_coverage;
+			std::vector<sf::Vector2i> points;
+
+			for (auto candidate_coverage_direction : MakeRelativeDirectionsList(coverage_direction)) {
+				dst_coverage = src_coverage + candidate_coverage_direction;
+
+				if(!IsInBounds(dst_coverage))
+					continue;
+
+				points = GetSortedReachableVisitPointsNotVisited(src_coverage, dst_coverage, src_local, path);
+
+				if(points.size())
+					break;
+			}
+			
+			if(!points.size())
+				break;
+
+			std::copy(points.begin(), points.end(), std::back_inserter(path));
+			prev_coverage = src_coverage;
+			src_coverage = dst_coverage;
+		}
+		
+		for (auto& point : path) {
+			point += Grid.Bounds.getPosition();
+		}
 
 		return path;
 	}

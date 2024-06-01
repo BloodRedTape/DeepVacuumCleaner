@@ -106,7 +106,7 @@ int main()
 
 	WriteEntireFile("test/file.txt", "Hello");
 	
-	MakeApp<EvolutionTrainingApp>({1920, 1080})->Run();
+	MakeApp<MapEditor>({1920, 1080})->Run();
 	
 	return 0;
 }

@@ -180,6 +180,7 @@ struct PathBuilder {
 	GridDecomposition &Grid;
 	const std::size_t CoverageSize = 3;
 	const sf::Vector2i CoverageGridSize;
+	std::vector<sf::Vector2i> VisitPoints;
 
 	PathBuilder(GridDecomposition &grid, std::size_t coverage_size = 3):
 		Grid(grid),
@@ -188,7 +189,9 @@ struct PathBuilder {
 			std::ceil(grid.Bounds.getSize().x / (Grid.CellSize.x * float(coverage_size))),
 			std::ceil(grid.Bounds.getSize().y / (Grid.CellSize.y * float(coverage_size)))
 		)
-	{}
+	{
+		VisitPoints = MakeVisitPoints();
+	}
 
 	std::vector<sf::Vector2i> MakePath()const {
 		return {};
@@ -329,6 +332,32 @@ struct PathBuilder {
 		return points;
 	}
 
+	std::vector<sf::Vector2i> MakeVisitPoints()const {
+		std::vector<sf::Vector2i> points;
+		for (int x = 0; x < CoverageGridSize.x; x++) {
+			for (int y = 0; y < CoverageGridSize.y; y++) {
+				auto cell_points = MakeVisitPoints({x, y});
+			
+				// где сука points.append(cell_points)
+				std::copy(cell_points.begin(), cell_points.end(), std::back_inserter(points));
+			}
+		}
+		return points;
+	}
+
+	std::vector<sf::Vector2i> GatherCoverageVisitPoints(sf::Vector2i coverage_cell)const {
+		auto rect = CoverageCellRect(coverage_cell);
+		
+		std::vector<sf::Vector2i> result;
+
+		for (auto point : VisitPoints) {
+			if(rect.contains(Grid.LocalPositionToCellIndex(point)))
+				result.push_back(point);
+		}
+
+		return result;
+	}
+
 	std::vector<sf::Vector2i> TraceLine(sf::Vector2i local_src, sf::Vector2i local_dst)const {
 		std::vector<sf::Vector2i> result;
 
@@ -370,7 +399,7 @@ struct PathBuilder {
 
 		std::vector<sf::Vector2i> reachable_visit_points;
 
-		for (auto point : MakeVisitPoints(dst_coverage)) {
+		for (auto point : GatherCoverageVisitPoints(dst_coverage)) {
 			
 			if(!AreDirectlyReachable(src_local, point))
 				continue;
@@ -382,7 +411,7 @@ struct PathBuilder {
 		}
 
 		auto Compare = [dir = axis_aligned_direction.value()](sf::Vector2i left, sf::Vector2i right) {
-			return At(left, dir.Axis) * dir.Direction < At(right, dir.Axis) * dir.Direction;
+			return At(left, dir.Axis) * dir.Direction > At(right, dir.Axis) * dir.Direction;
 		};
 		
 		std::sort(reachable_visit_points.begin(), reachable_visit_points.end(), Compare);
@@ -590,7 +619,7 @@ static void DrawForCell(const PathBuilder& builder, sf::RenderTarget& rt, sf::Ve
 	}
 
 	if (points) {
-		auto points = builder.MakeVisitPoints(coverage_cell);
+		auto points = builder.GatherCoverageVisitPoints(coverage_cell);
 
 		for (auto point : points)
 			Render::DrawCircle(rt, builder.Grid.Bounds.getPosition() + point, 5.f, sf::Color::Green);

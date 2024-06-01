@@ -4,7 +4,7 @@
 
 class EvolutionTraining {
 	std::vector<VacuumCleanerOperator> m_Population;
-	std::vector<VacuumCleanerOperator> m_BestOfEachGoal;
+	std::vector<NeuralNetworkAgent> m_BestOfEachGoal;
 	Environment m_Env;
 
 	size_t m_Generation = 0;
@@ -12,8 +12,10 @@ class EvolutionTraining {
 
 	size_t m_HighestGoal = 0;
 	float m_HighestFitness = -2;
+
+	std::string m_BestPath;
 public:
-	EvolutionTraining(std::optional<std::string> filepath);
+	EvolutionTraining(const std::string &best_path, const std::string &map_path);
 
 	void Tick(float dt);
 
@@ -27,7 +29,9 @@ public:
 
 	void DrawUI(sf::RenderTarget& rt);
 
-	void SaveBest();
+	void SaveBest(const std::string &filename)const;
+
+	void SaveBest()const{ SaveBest(m_BestPath); }
 
 	static std::string MakePath(size_t goal, size_t index);
 };

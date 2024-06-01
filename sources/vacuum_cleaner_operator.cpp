@@ -7,6 +7,9 @@ VacuumCleanerOperator::VacuumCleanerOperator(NeuralNetworkAgent &&agent):
 	m_Agent(std::move(agent))
 {}
 
+VacuumCleanerOperator::VacuumCleanerOperator(const NeuralNetworkAgent &agent):
+	m_Agent(agent)
+{}
 
 void VacuumCleanerOperator::Iterate(const Environment &env, float dt, size_t it_num) {
 

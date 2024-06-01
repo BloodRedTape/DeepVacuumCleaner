@@ -16,6 +16,8 @@ class NeuralNetworkAgent {
 	float m_MaxDistanceToGoal = 0.f;
 	float m_MinDistanceToGoal = 0.f;
 	float m_CurrentDistanceToGoal = 0.f;
+
+	friend struct Serializer<NeuralNetworkAgent>;
 public:
 
 	NeuralNetworkAgent(NeuralNetworkAgent &&) = default;
@@ -55,4 +57,20 @@ public:
 	static NeuralNetworkAgent Crossover(const NeuralNetworkAgent& first, const NeuralNetworkAgent &second);
 
 	static NeuralNetworkAgent Mutate(const NeuralNetworkAgent& agent, float chance, float range);
+};
+
+
+template<>
+struct Serializer<NeuralNetworkAgent>{
+	static void ToStream(const NeuralNetworkAgent& agent, std::ostream& stream) {
+		Serializer<NeuralNetwork>::ToStream(agent.m_NN, stream);
+	}
+
+	static std::optional<NeuralNetworkAgent> FromStream(std::istream& stream) {
+		auto nn = Serializer<NeuralNetwork>::FromStream(stream);
+		if(!nn.has_value())
+			return std::nullopt;
+
+		return {{std::move(nn.value())}};
+	}
 };

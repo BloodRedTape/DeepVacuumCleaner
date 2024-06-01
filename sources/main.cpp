@@ -7,6 +7,7 @@
 #include "vacuum_cleaner.hpp"
 #include "map_editor.hpp"
 #include "evolution_training.hpp"
+#include "imgui.hpp"
 #include <iostream>
 #include <sstream>
 #include <filesystem>
@@ -20,9 +21,9 @@ private:
 	bool m_IsPaused = false;
 	bool m_IsDebug = false;
 public:
-	EvolutionTrainingApp(sf::Vector2i size, std::optional<std::string> filepath):
+	EvolutionTrainingApp(sf::Vector2i size, const std::string &best, const std::string &map):
 		Super(size),
-		m_Evo(filepath)
+		m_Evo(best, map)
 	{
 		m_View.zoom(2);
 		m_Window.setFramerateLimit(1000);
@@ -41,24 +42,14 @@ public:
 		}
 	}
 
-	virtual void OnEvent(const sf::Event& e) override{ 
-		Super::OnEvent(e);
+	void OnImGui()override {
+		
+		ImGui::Begin("Training");
+		
+		if(ImGui::Button("SaveBest"))
+			m_Evo.SaveBest();
 
-		if(const auto *key = e.getIf<sf::Event::KeyPressed>()){
-			if(key->code == sf::Keyboard::Key::S && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl)) {
-				m_Evo.SaveBest();
-				std::cout << "Saved\n";
-			}
-		}
-#if 0
-		if (e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::Key::Space) {
-			m_IsPaused = !m_IsPaused;
-		}
-
-		if (e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::Key::D) {
-			m_IsDebug = !m_IsDebug;
-		}
-#endif
+		ImGui::End();
 	}
 
 	virtual void Render(sf::RenderTarget& rt) override{
@@ -104,7 +95,7 @@ std::unique_ptr<Application> MakeApp(sf::Vector2i size) {
 
 template<>
 std::unique_ptr<Application> MakeApp<EvolutionTrainingApp>(sf::Vector2i size) {
-	return std::make_unique<EvolutionTrainingApp>(size, std::nullopt);
+	return std::make_unique<EvolutionTrainingApp>(size, "best.mod", "room1.map");
 }
 
 int main()
@@ -115,7 +106,7 @@ int main()
 
 	WriteEntireFile("test/file.txt", "Hello");
 	
-	MakeApp<MapEditor>({1920, 1080})->Run();
+	MakeApp<EvolutionTrainingApp>({1920, 1080})->Run();
 	
 	return 0;
 }

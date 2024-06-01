@@ -4,32 +4,50 @@
 #include "random.hpp"
 #include "math.hpp"
 #include "bsl/format.hpp"
+#include "bsl/defer.hpp"
 #include "config.hpp"
 
-EvolutionTraining::EvolutionTraining(std::optional<std::string> filepath) {
-	m_Env.LoadFromFile("room1.map");
+EvolutionTraining::EvolutionTraining(const std::string &best_path, const std::string &map_path):
+	m_BestPath(best_path)
+{
+	m_Env.LoadFromFile(map_path);
 
-	if (filepath.has_value() && std::filesystem::exists(filepath.value())) {
+	defer{
+		if (!m_Population.size()) {
+			for (int i = 0; i < 50; i++) {
+				m_Population.push_back({});
+			}
+		}
 
-		for (int i = 0; ; i++) {
-			std::string path = filepath.value() + "/" + std::to_string(i) + ".bin";
-			if(!std::filesystem::exists(path))
-				break;
-			m_Population.push_back({});
-			m_Population.front().Agent().LoadFromFile(path);
-			m_Population.front().Iterate(m_Env, 0, 0);
+		for (auto& p : m_Population) {
+			p.Reset(m_Env, (sf::Vector2f)m_Env.StartPosition);
+		}
+	};
+	
+	std::fstream best(best_path, std::ios::binary | std::ios::in);
+	
+	if (!best.is_open()) {
+		Println("Can't open '%' for reading", best_path);
+		return;
+	}
+
+	m_Generation		= Serializer<std::size_t>::FromStream(best).value_or(0);
+	m_IterationsNumber	= Serializer<std::size_t>::FromStream(best).value_or(0);
+	m_HighestGoal		= Serializer<std::size_t>::FromStream(best).value_or(0);
+	m_HighestFitness	= Serializer<float>		 ::FromStream(best).value_or(0);
+	auto agents			= Serializer<std::vector<NeuralNetworkAgent>>::FromStream(best);
+
+	if (agents.has_value()) {
+		Println("Loaded % agents", agents.value().size());
+
+		m_BestOfEachGoal = std::move(agents.value());
+
+		for(const NeuralNetworkAgent &agent: m_BestOfEachGoal){
+			m_Population.push_back(agent);
+			m_Population.back().Iterate(m_Env, 0, 0);
 		}
 		
 		m_Population = PopulationFromSorted(m_Population);
-	}
-	else {
-		for(int i = 0; i<50; i++){
-			m_Population.push_back({});
-		}
-	}
-
-	for (auto& p : m_Population) {
-		p.Reset(m_Env, (sf::Vector2f)m_Env.StartPosition);
 	}
 }
 
@@ -45,15 +63,15 @@ void EvolutionTraining::Tick(float dt) {
 
 	if(h->CurrentGoal() > m_HighestGoal) {
 		m_HighestGoal = h->CurrentGoal();
-		m_BestOfEachGoal.push_back(*h);
-		SaveBest();
+		m_BestOfEachGoal.push_back(h->Agent());
+		SaveBest(m_BestPath);
 	}
 
 	if(best_fitness > m_HighestFitness){
 		m_HighestFitness = best_fitness;
 		if(h != m_Population.begin())
-			m_BestOfEachGoal.push_back(m_Population.front());
-		SaveBest();
+			m_BestOfEachGoal.push_back(m_Population.front().Agent());
+		SaveBest(m_BestPath);
 	}
 
 
@@ -94,7 +112,11 @@ void EvolutionTraining::NextGeneration() {
 	
 	Println("New Population");
 	Println("BestOfEachGoal: %", m_BestOfEachGoal.size());
-
+	
+	for (const auto &best : m_BestOfEachGoal) {
+		m_Population.push_back(best);
+		m_Population.back().Iterate(m_Env, 0, 0);
+	}
 	std::copy(m_BestOfEachGoal.begin(), m_BestOfEachGoal.end(), std::back_inserter(m_Population));
 
 	SortPopulation();
@@ -190,16 +212,21 @@ void EvolutionTraining::DrawUI(sf::RenderTarget& rt) {
 #endif
 }
 
-void EvolutionTraining::SaveBest() {
-	std::sort(m_Population.begin(), m_Population.end(), [&](auto &left, auto &right) {
-		return left.FitnessFunction(m_Env) > right.FitnessFunction(m_Env);
-	});
+void EvolutionTraining::SaveBest(const std::string &filename)const{
+	std::fstream best(filename, std::ios::binary | std::ios::out);
 
-	for (int i = 0; i < std::min(ModelsToSave, m_Population.size()); i++) {
-		m_Population.front().Agent().SaveToFile(MakePath(m_HighestGoal, i));
+	if(!best.is_open()){
+		Println("Can't open '%' to save BestOfEachGoal", filename);
+		return;
 	}
 
-	std::cout << "Saved\n";
+	Serializer<std::size_t>::ToStream(m_Generation, best);
+	Serializer<std::size_t>::ToStream(m_IterationsNumber, best);
+	Serializer<std::size_t>::ToStream(m_HighestGoal, best);
+	Serializer<float>	   ::ToStream(m_HighestFitness, best);
+	Serializer<std::vector<NeuralNetworkAgent>>::ToStream(m_BestOfEachGoal, best);
+
+	Println("Saved % best Agents", m_BestOfEachGoal.size());
 }
 
 std::string EvolutionTraining::MakePath(size_t goal, size_t index) {

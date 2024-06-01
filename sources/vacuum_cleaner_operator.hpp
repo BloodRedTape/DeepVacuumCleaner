@@ -20,6 +20,8 @@ public:
 	VacuumCleanerOperator &operator=(const VacuumCleanerOperator &) = default;
 
 	VacuumCleanerOperator(NeuralNetworkAgent &&agent);
+
+	VacuumCleanerOperator(const NeuralNetworkAgent &agent);
 	
 	void Iterate(const Environment &env, float dt, size_t it_num);
 

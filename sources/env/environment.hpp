@@ -7,6 +7,7 @@
 #include <ostream>
 #include <istream>
 #include "env/grid.hpp"
+#include "env/coverage.hpp"
 
 
 struct Environment {
@@ -15,6 +16,8 @@ struct Environment {
 	sf::Vector2i StartPosition;
 	
 	GridDecomposition Grid;
+	CoverageDecomposition Coverage{Grid};
+
 	std::size_t CoverageSize = 4;
 
 	int RenderWallHeight = 4.f;
@@ -39,6 +42,9 @@ struct Environment {
 	sf::IntRect GatherBounds()const;
 
 	void Clear() {
-		*this = Environment();
+		Walls.clear();
+		Path.clear();
+		Grid.Clear();
+		Coverage.Rebuild();
 	}
 };

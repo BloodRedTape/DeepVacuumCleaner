@@ -29,6 +29,16 @@ namespace Math{
 		return t * Forward;
 	}
 
+	
+	template<typename T>
+	inline bool IsRectInside(const sf::Rect<T>& inner, const sf::Rect<T>& outer) {
+		return (
+			inner.left >= outer.left &&
+			inner.top >= outer.top &&
+			inner.left + inner.width <= outer.left + outer.width &&
+			inner.top + inner.height <= outer.top + outer.height
+		);
+	}
 
 	inline std::optional<float> RayLineIntersection(const sf::Vector2f& rayOrigin, const sf::Vector2f& rayDirection, const sf::Vector2f& lineStart, const sf::Vector2f& lineEnd) {
 		auto v1 = rayOrigin - lineStart;
@@ -123,3 +133,46 @@ namespace Math{
 	}
 
 }//namespace Math::
+
+
+static int &At(sf::Vector2i& vec, int axis){
+	if (axis == 0)
+		return vec.x;
+	if (axis == 1)
+		return vec.y;
+	assert(false);
+	return vec.x;
+};
+
+static const int &At(const sf::Vector2i& vec, int axis){
+	if (axis == 0)
+		return vec.x;
+	if (axis == 1)
+		return vec.y;
+	assert(false);
+	return vec.x;
+};
+
+struct AxisAlignedDirection2D{
+	int Direction = 0;
+	int Axis = 0;
+
+	AxisAlignedDirection2D(int axis, int direction){
+		Direction = direction;
+		Axis = axis;
+
+		assert(direction == 1 || direction == -1);
+		assert(axis == 0 || direction == 2);
+	}
+
+	static std::optional<AxisAlignedDirection2D> Make(sf::Vector2i vector) {
+		if (vector.x == 0 && std::abs(vector.y) == 1) {
+			return AxisAlignedDirection2D(1, vector.y);
+		}
+		if (vector.y == 0 && std::abs(vector.x) == 1) {
+			return AxisAlignedDirection2D(0, vector.x);
+		}
+		return std::nullopt;
+	}
+};
+

@@ -39,6 +39,10 @@ struct GridDecomposition {
 
 	sf::Vector2i Size()const;
 
+	void Clear() {
+		*this = GridDecomposition();
+	}
+
 	static GridDecomposition Make(sf::Vector2i cell_size, sf::IntRect bounds, const std::vector<Wall> &walls);
 };
 

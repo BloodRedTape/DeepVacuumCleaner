@@ -1,6 +1,9 @@
 #include "grid.hpp"
 #include <SFML/Graphics/RectangleShape.hpp>
 #include "utils/math.hpp"
+#include "bsl/log.hpp"
+
+DEFINE_LOG_CATEGORY(Grid)
 
 void GridDecomposition::Draw(sf::RenderTarget& rt) {
 	sf::RectangleShape rect;
@@ -11,6 +14,69 @@ void GridDecomposition::Draw(sf::RenderTarget& rt) {
 		rt.draw(rect);
 	}
 }
+
+
+std::vector<sf::Vector2i> GridDecomposition::BuildPath(sf::Vector2i start_position, int step)const {
+	if (!Bounds.contains(start_position)) {
+		LogGrid(Error, "Start is not in the bounds");
+		return {};
+	}
+
+	sf::Vector2i start = PositionToCellIndex(start_position);
+
+	if(start.x == -1 || start.y == -1){
+		LogGrid(Error, "invalid start position cell");
+		return {};
+	}
+
+	LogGrid(Error, "Building path for Grid: % | % = %", Size().x, Size().y, Size().x * Size().y);
+
+	std::vector<sf::Vector2i> index_path;
+	
+	index_path.push_back(start);
+
+	sf::Vector2i directions[] = {
+		{ 0, 1},
+		{ 1, 0},
+		{ 0,-1},
+		{-1, 0},
+	};
+
+	auto TryGetNextCell = [&](const std::vector<sf::Vector2i>& visited) -> std::optional<sf::Vector2i> {
+		const int Step = step;
+
+		for (auto it = visited.rbegin(); it != visited.rend(); ++it) {
+			sf::Vector2i current = *it;
+
+			for (auto dir : directions) {
+				auto candidate = current + dir * Step;
+
+				if (IsInBounds(candidate) && !IsOccupiedOrVisited(candidate, visited) && !HasObstacles(current, dir, Step))
+					return { candidate };
+			}
+		}
+
+		return std::nullopt;
+	};
+
+	for(;;){
+		auto next = TryGetNextCell(index_path);
+
+		if(!next.has_value())
+			break;
+		
+		index_path.push_back(next.value());
+	}
+
+
+	std::vector<sf::Vector2i> path;
+
+	for(auto index: index_path)
+		path.push_back(CellIndexToMiddlePosition(index));
+
+	return path;	
+}
+
 
 GridDecomposition GridDecomposition::Make(sf::Vector2i cell_size, sf::IntRect bounds, const std::vector<Wall>& walls) {
 	GridDecomposition grid;

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include "bsl/log.hpp"
 #include "utils/math.hpp"
+#include "utils/assert.hpp"
 
 DEFINE_LOG_CATEGORY(Coverage)
 
@@ -57,8 +58,8 @@ bool CoverageDecomposition::IsInBounds(sf::Vector2i coverage_index)const {
 }
 
 sf::IntRect CoverageDecomposition::Extend(sf::IntRect rect, int direction, int axis)const {
-	assert(direction == 1 || direction == -1);
-	assert(axis == 0 || axis == 1);
+	verify(direction == 1 || direction == -1);
+	verify(axis == 0 || axis == 1);
 
 
 	sf::Vector2i min = rect.getPosition();
@@ -196,9 +197,6 @@ std::vector<sf::Vector2i> CoverageDecomposition::GatherCoverageVisitPoints(sf::V
 
 	for (auto point : VisitPoints) {
 		auto cell = Grid.LocalPositionToCellIndex(point);
-
-		if(cell.x == -1)
-			Println("Error");
 
 		if(rect.contains(cell))
 			result.push_back(point);

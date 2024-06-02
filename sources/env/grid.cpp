@@ -110,7 +110,7 @@ sf::Vector2i GridDecomposition::PositionToCellIndex(sf::Vector2i position)const{
 }
 
 sf::Vector2i GridDecomposition::LocalPositionToCellIndex(sf::Vector2i position) const{
-	if(!Bounds.contains(position))
+	if(!verify(position.x >= 0 && position.y >= 0))
 		return sf::Vector2i(-1, -1);
 
 	return position.cwiseDiv(CellSize);

@@ -4,7 +4,7 @@
 #include <optional>
 #include <SFML/System/Vector2.hpp>
 #include <SFML/Graphics/Transform.hpp>
-
+#include "utils/assert.hpp"
 
 namespace Math{
 
@@ -140,7 +140,7 @@ static int &At(sf::Vector2i& vec, int axis){
 		return vec.x;
 	if (axis == 1)
 		return vec.y;
-	assert(false);
+	verify(false);
 	return vec.x;
 };
 
@@ -149,7 +149,7 @@ static const int &At(const sf::Vector2i& vec, int axis){
 		return vec.x;
 	if (axis == 1)
 		return vec.y;
-	assert(false);
+	verify(false);
 	return vec.x;
 };
 
@@ -161,8 +161,8 @@ struct AxisAlignedDirection2D{
 		Direction = direction;
 		Axis = axis;
 
-		assert(direction == 1 || direction == -1);
-		assert(axis == 0 || direction == 2);
+		verify(direction == 1 || direction == -1);
+		verify(axis == 0 || axis == 1);
 	}
 
 	static std::optional<AxisAlignedDirection2D> Make(sf::Vector2i vector) {

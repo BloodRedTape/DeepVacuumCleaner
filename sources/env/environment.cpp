@@ -159,12 +159,16 @@ void Environment::AutogeneratePath(sf::Vector2i cell_size, sf::Vector2i start_po
 	Path.clear();
 	StartPosition = start_position;
 
+	sf::Clock cl;
 	Grid = GridDecomposition::Make(cell_size, GatherBounds(), Walls);
-	Coverage.Rebuild();
+	LogEnv(Info, "Grid Decomposition took % seconds", cl.restart().asSeconds());
 
-	//Path = Grid.BuildPath(start_position, step);
+	Coverage.Rebuild();
+	LogEnv(Info, "Coverage Decomposition took % seconds", cl.restart().asSeconds());
 
 	Path = Coverage.BuildPath(start_position);
+	LogEnv(Info, "Path building took % seconds", cl.restart().asSeconds());
+
 }
 
 sf::Vector2i Min(sf::Vector2i first, sf::Vector2i second) {

@@ -1,6 +1,6 @@
 #include "application.hpp"
 #include "imgui-SFML.h"
-#include "render.hpp"
+#include "utils/render.hpp"
 
 Application::Application(sf::Vector2i world_size):
 	m_WorldSize(world_size)

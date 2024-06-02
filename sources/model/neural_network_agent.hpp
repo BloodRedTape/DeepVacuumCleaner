@@ -1,9 +1,9 @@
 #pragma once
 
-#include "nn.hpp"
+#include "utils/nn.hpp"
 #include <vector>
 #include "vacuum_cleaner.hpp"
-#include "environment.hpp"
+#include "env/environment.hpp"
 
 class NeuralNetworkAgent {
 	NeuralNetwork m_NN;

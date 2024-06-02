@@ -1,7 +1,7 @@
 #include "vacuum_cleaner_operator.hpp"
-#include "math.hpp"
+#include "utils/math.hpp"
 #include "config.hpp"
-#include "render.hpp"
+#include "utils/render.hpp"
 
 VacuumCleanerOperator::VacuumCleanerOperator(NeuralNetworkAgent &&agent):
 	m_Agent(std::move(agent))

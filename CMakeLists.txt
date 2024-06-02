@@ -16,17 +16,20 @@ target_link_libraries(ImGui-SFML PUBLIC freetype PUBLIC SFML::System PUBLIC SFML
 
 add_executable (DeepVacuumCleaner 
 	"sources/main.cpp" 
-	"sources/nn.cpp"
+	"sources/utils/nn.cpp"
 	"sources/application.cpp" 
-	"sources/render.cpp" 
-	"sources/environment.cpp" 
-	"sources/vacuum_cleaner.cpp" 
+	"sources/utils/render.cpp" 
+	"sources/env/environment.cpp" 
+	"sources/model/vacuum_cleaner.cpp" 
 	"sources/map_editor.cpp"
-	"sources/stupid_agent.cpp" 
-	"sources/neural_network_agent.cpp" 
-	"sources/vacuum_cleaner_operator.cpp" 
-	"sources/evolution_training.cpp"
+	"sources/model/stupid_agent.cpp" 
+	"sources/model/neural_network_agent.cpp" 
+	"sources/model/vacuum_cleaner_operator.cpp" 
+	"sources/model/evolution_training.cpp"
+	"sources/env/grid.cpp"
 )
+
+target_include_directories(DeepVacuumCleaner PUBLIC "./sources")
 
 target_link_libraries(DeepVacuumCleaner ImGui-SFML bsl)
 

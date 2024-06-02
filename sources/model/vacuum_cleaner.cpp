@@ -1,6 +1,6 @@
 #include "vacuum_cleaner.hpp"
-#include "math.hpp"
-#include "render.hpp"
+#include "utils/math.hpp"
+#include "utils/render.hpp"
 #include "config.hpp"
 
 VacuumCleaner::VacuumCleaner() {

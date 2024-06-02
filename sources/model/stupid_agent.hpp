@@ -1,7 +1,7 @@
 #pragma once
 
 #include "vacuum_cleaner.hpp"
-#include "environment.hpp"
+#include "env/environment.hpp"
 
 class StupidAgent {
 	int m_CurrentGoal = 0;

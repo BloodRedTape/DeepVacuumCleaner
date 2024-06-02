@@ -2,8 +2,8 @@
 
 #include <optional>
 #include <SFML/System/Vector2.hpp>
-#include "environment.hpp"
-#include "vacuum_cleaner.hpp"
+#include "env/environment.hpp"
+#include "model/vacuum_cleaner.hpp"
 #include "application.hpp"
 
 class MapEditor: public ZoomMoveApplication{

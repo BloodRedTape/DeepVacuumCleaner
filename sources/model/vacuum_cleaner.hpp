@@ -5,7 +5,7 @@
 #include <vector>
 #include <fstream>
 #include "bsl/serialization_std.hpp"
-#include "environment.hpp"
+#include "env/environment.hpp"
 
 struct Sensor {
 	float Rotation = 0.f;

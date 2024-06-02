@@ -1,8 +1,7 @@
 #include "map_editor.hpp"
-#include "render.hpp"
+#include "utils/render.hpp"
 #include "config.hpp"
-#include "imgui.h"
-#include "imgui.hpp"
+#include "utils/imgui.hpp"
 
 #define EDITOR_WITH_PATH 0
 

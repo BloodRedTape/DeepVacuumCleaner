@@ -1,13 +1,7 @@
-﻿#include "matrix.hpp"
-#include "nn.hpp"
-#include "random.hpp"
-#include "render.hpp"
-#include "math.hpp"
-#include "application.hpp"
-#include "vacuum_cleaner.hpp"
+﻿#include "application.hpp"
 #include "map_editor.hpp"
-#include "evolution_training.hpp"
-#include "imgui.hpp"
+#include "model/evolution_training.hpp"
+#include "utils/imgui.hpp"
 #include <iostream>
 #include <sstream>
 #include <filesystem>

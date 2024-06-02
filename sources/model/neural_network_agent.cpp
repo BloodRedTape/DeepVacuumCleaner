@@ -1,5 +1,5 @@
 #include "neural_network_agent.hpp"
-#include "math.hpp"
+#include "utils/math.hpp"
 #include "stupid_agent.hpp"
 #include "config.hpp"
 

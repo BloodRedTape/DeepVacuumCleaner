@@ -84,7 +84,7 @@ static void DrawForCell(const CoverageDecomposition& builder, sf::RenderTarget& 
 	}
 }
 
-void Environment::DrawZones(sf::RenderTarget& rt, sf::Vector2i world_mouse_position, bool for_all_cells, bool zone, bool full_zone, bool points, bool cell_outline) {
+void Environment::DrawZones(sf::RenderTarget& rt, sf::Vector2i world_mouse_position, bool for_all_cells, bool zone, bool full_zone, bool points, bool cell_outline, bool walls) {
 
 	bool debug_line_trace = false;
 
@@ -93,6 +93,9 @@ void Environment::DrawZones(sf::RenderTarget& rt, sf::Vector2i world_mouse_posit
 			Render::DrawRect(rt, Grid.Bounds.getPosition() + cell.cwiseMul(Grid.CellSizeVec()), Grid.CellSizeVec());
 		}
 	}
+
+	
+
 #if 0
 	if (true) {
 		for(int x = 0; x < builder.CoverageGridSize.x; x++){
@@ -120,10 +123,16 @@ void Environment::DrawZones(sf::RenderTarget& rt, sf::Vector2i world_mouse_posit
 
 		DrawForCell(Coverage, rt, coverage_cell, zone, full_zone, points, cell_outline);
 	} else {
+
 		for(int x = 0; x < Coverage.CoverageGridSize.x; x++){
 			for(int y = 0; y < Coverage.CoverageGridSize.y; y++){
 				sf::Vector2i coverage_cell(x, y);
 				DrawForCell(Coverage, rt, coverage_cell, zone, full_zone, points, cell_outline);
+			}
+		}
+		if(walls){
+			for(auto point: Coverage.WallVisitPoints){
+				Render::DrawCircle(rt, Coverage.Grid.Bounds.getPosition() + point, 5.f, sf::Color::Yellow);
 			}
 		}
 	}
@@ -154,7 +163,7 @@ void Environment::LoadFromFile(const std::string& filename) {
 	Walls = std::move(walls.value());
 }
 
-void Environment::AutogeneratePath(std::size_t cell_size, sf::Vector2i start_position, int) {
+void Environment::AutogeneratePath(std::size_t cell_size, sf::Vector2i start_position, bool build_path) {
 	LogEnvIf(Path.size(), Warning, "Path is already generated, overwriting");
 	Path.clear();
 	StartPosition = start_position;
@@ -168,10 +177,11 @@ void Environment::AutogeneratePath(std::size_t cell_size, sf::Vector2i start_pos
 
 	Coverage.Rebuild();
 	LogEnv(Info, "Coverage Decomposition took % seconds", cl.restart().asSeconds());
-
-	Path = Coverage.BuildPath(start_position);
-	LogEnv(Info, "Path building took % seconds", cl.restart().asSeconds());
-
+	
+	if(build_path){
+		Path = Coverage.SimplePathAlgorithm(start_position);
+		LogEnv(Info, "Path building took % seconds", cl.restart().asSeconds());
+	}
 }
 
 sf::Vector2i Min(sf::Vector2i first, sf::Vector2i second) {

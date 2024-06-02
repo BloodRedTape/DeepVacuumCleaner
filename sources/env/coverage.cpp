@@ -21,17 +21,15 @@ void CoverageDecomposition::Rebuild() {
 	);
 
 	VisitPoints = MakeVisitPoints();
+	
+	ForEachCoverage([&](sf::Vector2i coverage_cell) {
+		ZoneDecompositionCache[coverage_cell] = MakeZoneDecomposition(coverage_cell);
+		CoverageZoneDecompositionCache[coverage_cell] = ToFullCoverageZones(ZoneDecompositionCache[coverage_cell]);
+		LocatedVisitPointsCache[coverage_cell] = GatherCoverageVisitPoints(coverage_cell);
+		ProducedVisitPointsCache[coverage_cell] = MakeVisitPoints(coverage_cell);
+	});
 
-	for (int x = 0; x < CoverageGridSize.x; x++) {
-		for (int y = 0; y < CoverageGridSize.x; y++) {
-			sf::Vector2i coverage_cell = {x, y};
-
-			ZoneDecompositionCache[coverage_cell] = MakeZoneDecomposition(coverage_cell);
-			CoverageZoneDecompositionCache[coverage_cell] = ToFullCoverageZones(ZoneDecompositionCache[coverage_cell]);
-			LocatedVisitPointsCache[coverage_cell] = GatherCoverageVisitPoints(coverage_cell);
-			ProducedVisitPointsCache[coverage_cell] = MakeVisitPoints(coverage_cell);
-		}
-	}
+	WallVisitPoints = GatherWallsCoverageVisitPoints();
 }
 
 sf::Vector2i CoverageDecomposition::GridToCoverageCell(sf::Vector2i grid_index)const{
@@ -179,14 +177,14 @@ std::vector<sf::Vector2i> CoverageDecomposition::MakeVisitPoints(sf::Vector2i co
 
 std::vector<sf::Vector2i> CoverageDecomposition::MakeVisitPoints()const {
 	std::vector<sf::Vector2i> points;
-	for (int x = 0; x < CoverageGridSize.x; x++) {
-		for (int y = 0; y < CoverageGridSize.y; y++) {
-			auto cell_points = MakeVisitPoints({x, y});
+
+	ForEachCoverage([&](sf::Vector2i coverage) {
+		auto cell_points = MakeVisitPoints(coverage);
 		
-			// где сука points.append(cell_points)
-			std::copy(cell_points.begin(), cell_points.end(), std::back_inserter(points));
-		}
-	}
+		// где сука points.append(cell_points)
+		std::copy(cell_points.begin(), cell_points.end(), std::back_inserter(points));
+	});
+
 	return points;
 }
 
@@ -234,6 +232,19 @@ std::vector<sf::Vector2i> CoverageDecomposition::GatherCoverageVisitPointsInRadi
 	}
 	
 	return result;
+}
+
+std::vector<sf::Vector2i> CoverageDecomposition::GatherWallsCoverageVisitPoints()const {
+	std::vector<sf::Vector2i> points;
+
+	ForEachCoverage([&](sf::Vector2i coverage) {
+		auto visit_points = MakeVisitPoints(coverage);
+
+		if(visit_points.size() > 1 || HasAnyOccupied(coverage))
+			std::copy(visit_points.begin(), visit_points.end(), std::back_inserter(points));
+	});
+	
+	return points;
 }
 
 std::vector<sf::Vector2i> CoverageDecomposition::TraceLine(sf::Vector2i local_src, sf::Vector2i local_dst)const {
@@ -375,5 +386,97 @@ std::vector<sf::Vector2i> CoverageDecomposition::BuildPath(sf::Vector2i start_po
 		point += Grid.Bounds.getPosition();
 	}
 
+	return path;
+}
+
+std::optional<std::size_t> CoverageDecomposition::GetNearestReachable(std::vector<sf::Vector2i>& candidates, sf::Vector2i dir_local, sf::Vector2i src_local)const {
+	auto IsReachable = [this, src_local](sf::Vector2i dst) {
+		return AreDirectlyReachable(src_local, dst);
+	};
+
+	auto partition = std::stable_partition(candidates.begin(), candidates.end(), IsReachable);
+
+	auto SortByDistance = [&](sf::Vector2i first, sf::Vector2i second) {
+		return sf::Vector2f(first - src_local).length() < sf::Vector2f(second - src_local).length();
+	};
+
+	auto CompareByDot = [src_local, dir_local = sf::Vector2f(dir_local).normalized()](sf::Vector2i left, sf::Vector2i right) {
+		auto left_dir = sf::Vector2f(left - src_local).normalized();
+		auto right_dir = sf::Vector2f(right - src_local).normalized();
+
+		return left_dir.dot(dir_local) > right_dir.dot(dir_local);
+	};
+
+	auto it = std::min_element(candidates.begin(), partition, SortByDistance);
+
+	if(it == partition)
+		return std::nullopt;
+
+
+	return {it - candidates.begin()};
+}
+
+std::vector<sf::Vector2i> CoverageDecomposition::BuildPath2(sf::Vector2i start_position)const {
+
+	std::vector<sf::Vector2i> points = GatherWallsCoverageVisitPoints();
+
+	std::vector<sf::Vector2i> path;
+	path.push_back(start_position  - Grid.Bounds.getPosition());
+
+	for (;;) {
+		sf::Vector2i dir_local = path.size() >= 2 ? path.back() - *(path.end()-2) : sf::Vector2i(1, 0);
+
+		auto nearest = GetNearestReachable(points, dir_local, path.back());
+
+		if(!nearest.has_value())
+			break;
+		
+		auto point = points[nearest.value()];
+
+		path.push_back(point);
+
+		std::swap(points.back(), points[nearest.value()]);
+		points.pop_back();
+	}
+
+	for (auto& point : path) {
+		point += Grid.Bounds.getPosition();
+	}
+	return path;
+}
+
+std::vector<sf::Vector2i> CoverageDecomposition::SimplePathAlgorithm(sf::Vector2i start_position)const {
+	std::vector<sf::Vector2i> path;
+	path.push_back(start_position  - Grid.Bounds.getPosition());
+
+	std::vector<sf::Vector2i> candidates = VisitPoints;
+
+	std::sort(candidates.begin(), candidates.end(), [](auto l, auto r){return l.y < r.y; });
+	
+	bool reverse = false;
+	for (;candidates.size();) {
+		int layer_y = candidates.back().y;
+
+		std::vector<sf::Vector2i> layer;
+
+		std::copy_if(candidates.begin(), candidates.end(), std::back_inserter(layer), [layer_y](auto v){return v.y == layer_y; });
+		
+		for(int i = 0; i<layer.size(); i++)
+			candidates.pop_back();
+		
+		std::sort(layer.begin(), layer.end(), [reverse](auto l, auto r){return reverse ? l.x < r.x : l.x > r.x;});
+		
+		for (auto l : layer) {
+			if(AreDirectlyReachable(path.back(), l))
+				path.push_back(l);
+		}
+		
+		reverse = !reverse;
+	}
+
+	for (auto& point : path) {
+		point += Grid.Bounds.getPosition();
+	}
+	
 	return path;
 }

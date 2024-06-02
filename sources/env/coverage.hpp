@@ -18,6 +18,7 @@ struct CoverageDecomposition {
 	std::size_t CoverageSize = 3;
 	sf::Vector2i CoverageGridSize;
 	std::vector<sf::Vector2i> VisitPoints;
+	std::vector<sf::Vector2i> WallVisitPoints;
 
 	mutable std::unordered_map<sf::Vector2i, std::vector<sf::Vector2i>> ProducedVisitPointsCache;
 	mutable std::unordered_map<sf::Vector2i, std::vector<sf::Vector2i>> LocatedVisitPointsCache;
@@ -61,6 +62,8 @@ struct CoverageDecomposition {
 
 	std::vector<sf::Vector2i> GatherCoverageVisitPoints(sf::Vector2i coverage_cell)const;
 
+	std::vector<sf::Vector2i> GatherWallsCoverageVisitPoints()const;
+
 	bool HasAnyOccupied(sf::Vector2i coverage)const;
 
 	std::vector<sf::Vector2i> GatherCoverageVisitPointsInRadius(sf::Vector2i coverage_cell, sf::Vector2i dims = {1, 1})const;
@@ -74,5 +77,20 @@ struct CoverageDecomposition {
 	static std::array<sf::Vector2i, 4> MakeRelativeDirectionsList(sf::Vector2i current);
 
 	std::vector<sf::Vector2i> BuildPath(sf::Vector2i start_position)const;
+
+	std::optional<std::size_t> GetNearestReachable(std::vector<sf::Vector2i> &candidates, sf::Vector2i dir_local, sf::Vector2i src_local)const;
+
+	std::vector<sf::Vector2i> BuildPath2(sf::Vector2i start_position)const;
+
+	std::vector<sf::Vector2i> SimplePathAlgorithm(sf::Vector2i start_position)const;
+	
+	template<typename PredicateType>
+	void ForEachCoverage(PredicateType predicate)const{
+		for (int x = 0; x < CoverageGridSize.x; x++) {
+			for (int y = 0; y < CoverageGridSize.y; y++) {
+				predicate(sf::Vector2i(x, y));
+			}
+		}
+	}
 };
 

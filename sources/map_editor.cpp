@@ -79,9 +79,10 @@ void MapEditor::OnImGui() {
 	ImGui::Checkbox("Draw Bounds", &m_DrawBounds);
 	ImGui::Checkbox("Draw Grid Decomposition", &m_DrawGridDecomposition);
 	ImGui::InputInt("Grid Cell Size", &m_GridCellSize);
-
+	
+	ImGui::Checkbox("Build Path", &m_BuildPath);
 	if (ImGui::Button("Rebuild"))
-		m_Env.AutogeneratePath(m_GridCellSize, m_StartPosition, 0);
+		m_Env.AutogeneratePath(m_GridCellSize, m_StartPosition, m_BuildPath);
 
 	ImGui::Separator();
 
@@ -94,6 +95,7 @@ void MapEditor::OnImGui() {
 		ImGui::Checkbox("DrawZoneDecomposition", &m_DrawZoneDecomposition);
 		ImGui::Checkbox("DrawFullZoneDecomposition", &m_DrawFullZoneDecomposition);
 		ImGui::Checkbox("DrawCoveragePoints", &m_DrawCoveragePoints);
+		ImGui::Checkbox("DrawWallsCoveragePoints", &m_DrawWallsCoveragePoints);
 	}
 
 	ImGui::End();
@@ -114,7 +116,8 @@ void MapEditor::Render(sf::RenderTarget& rt) {
 		m_CoveragePathDebugging && m_DrawZoneDecomposition, 
 		m_CoveragePathDebugging && m_DrawFullZoneDecomposition, 
 		m_CoveragePathDebugging && m_DrawCoveragePoints, 
-		m_CoveragePathDebugging && m_DrawCurrentCell
+		m_CoveragePathDebugging && m_DrawCurrentCell,
+		m_CoveragePathDebugging && m_DrawWallsCoveragePoints
 	);
 	m_Env.Draw(rt, m_PathDrawingMode);
 

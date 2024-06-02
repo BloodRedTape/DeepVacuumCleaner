@@ -27,12 +27,15 @@ private:
 
 	int m_SnapGrid = 20;
 
+	bool m_BuildPath = false;
+
 	bool m_CoveragePathDebugging = true;
 	bool m_ForAllCells = true;
 	bool m_DrawCurrentCell = false;
 	bool m_DrawZoneDecomposition = false;
 	bool m_DrawFullZoneDecomposition = false;
 	bool m_DrawCoveragePoints = false;
+	bool m_DrawWallsCoveragePoints = false;
 public:
 
 	MapEditor(sf::Vector2i world_size);

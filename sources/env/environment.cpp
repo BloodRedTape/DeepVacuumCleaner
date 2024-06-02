@@ -61,25 +61,19 @@ void Environment::Draw(sf::RenderTarget& rt, std::size_t path_drawing_mode) {
 
 static void DrawForCell(const CoverageDecomposition& builder, sf::RenderTarget& rt, sf::Vector2i coverage_cell, bool zone, bool full_zone, bool points, bool cell_outline) {
 	if (zone) {
-		auto zones = builder.MakeZoneDecomposition(coverage_cell);
-
-		for (auto zone : zones) {
+		for (auto zone : builder.ZoneDecompositionCache[coverage_cell] ) {
 			Render::DrawRect(rt, builder.Grid.CellRectToAbsolute(zone), sf::Color::Cyan * sf::Color(255, 255, 255, 40), 2, sf::Color::Cyan);
 		}
 
 	}
 	if (full_zone) {
-		auto zones = builder.MakeZoneDecomposition(coverage_cell);
-
-		for (auto zone : builder.ToFullCoverageZones(zones)) {
+		for (auto zone : builder.CoverageZoneDecompositionCache[coverage_cell]) {
 			Render::DrawRect(rt, builder.Grid.CellRectToAbsolute(zone), sf::Color::Green * sf::Color(255, 255, 255, 20), 2, sf::Color::Green);
 		}
 	}
 
 	if (points) {
-		auto points = builder.GatherCoverageVisitPoints(coverage_cell);
-
-		for (auto point : points)
+		for (auto point : builder.LocatedVisitPointsCache[coverage_cell])
 			Render::DrawCircle(rt, builder.Grid.Bounds.getPosition() + point, 5.f, sf::Color::Green);
 	}
 

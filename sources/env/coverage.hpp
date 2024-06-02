@@ -1,13 +1,28 @@
 #pragma once
 
 #include <optional>
+#include <unordered_map>
 #include "env/grid.hpp"
+
+namespace std {
+	template<typename T>
+	struct hash<sf::Vector2<T>>{
+		std::size_t operator()(const sf::Vector2<T>& vector)const{
+			return std::hash<T>()(vector.x) ^ std::hash<T>()(vector.y);
+		}
+	};
+}
 
 struct CoverageDecomposition {
 	GridDecomposition &Grid;
 	std::size_t CoverageSize = 3;
 	sf::Vector2i CoverageGridSize;
 	std::vector<sf::Vector2i> VisitPoints;
+
+	mutable std::unordered_map<sf::Vector2i, std::vector<sf::Vector2i>> ProducedVisitPointsCache;
+	mutable std::unordered_map<sf::Vector2i, std::vector<sf::Vector2i>> LocatedVisitPointsCache;
+	mutable std::unordered_map<sf::Vector2i, std::vector<sf::IntRect>> ZoneDecompositionCache;
+	mutable std::unordered_map<sf::Vector2i, std::vector<sf::IntRect>> CoverageZoneDecompositionCache;
 
 	CoverageDecomposition(GridDecomposition &grid, std::size_t coverage_size = 3);
 

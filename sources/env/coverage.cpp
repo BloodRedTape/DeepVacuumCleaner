@@ -8,17 +8,29 @@ DEFINE_LOG_CATEGORY(Coverage)
 
 CoverageDecomposition::CoverageDecomposition(GridDecomposition &grid, std::size_t coverage_size):
 	Grid(grid),
-	CoverageSize(coverage_size),
-	CoverageGridSize(
-		std::ceil(grid.Bounds.getSize().x / (Grid.CellSize.x * float(coverage_size))),
-		std::ceil(grid.Bounds.getSize().y / (Grid.CellSize.y * float(coverage_size)))
-	)
+	CoverageSize(coverage_size)
 {
 	Rebuild();
 }
 
 void CoverageDecomposition::Rebuild() {
+	CoverageGridSize = sf::Vector2i(
+		std::ceil(Grid.Bounds.getSize().x / (Grid.CellSize.x * float(CoverageSize))),
+		std::ceil(Grid.Bounds.getSize().y / (Grid.CellSize.y * float(CoverageSize)))
+	);
+
 	VisitPoints = MakeVisitPoints();
+
+	for (int x = 0; x < CoverageGridSize.x; x++) {
+		for (int y = 0; y < CoverageGridSize.x; y++) {
+			sf::Vector2i coverage_cell = {x, y};
+
+			ZoneDecompositionCache[coverage_cell] = MakeZoneDecomposition(coverage_cell);
+			CoverageZoneDecompositionCache[coverage_cell] = ToFullCoverageZones(ZoneDecompositionCache[coverage_cell]);
+			LocatedVisitPointsCache[coverage_cell] = GatherCoverageVisitPoints(coverage_cell);
+			ProducedVisitPointsCache[coverage_cell] = MakeVisitPoints(coverage_cell);
+		}
+	}
 }
 
 sf::Vector2i CoverageDecomposition::GridToCoverageCell(sf::Vector2i grid_index)const{
@@ -214,7 +226,7 @@ std::vector<sf::Vector2i> CoverageDecomposition::GatherCoverageVisitPointsInRadi
 
 	for (int x = start.x; x <= end.x; x++) {
 		for (int y = start.y; y <= end.y; y++) {
-			auto points = GatherCoverageVisitPoints({x, y});
+			auto points = LocatedVisitPointsCache[{x, y}];
 
 			std::copy(points.begin(), points.end(), std::back_inserter(result));
 		}				

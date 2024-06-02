@@ -205,6 +205,14 @@ struct PathBuilder {
 		return {coverage_index * int(CoverageSize), sf::Vector2i(CoverageSize, CoverageSize)};
 	}
 
+	sf::IntRect CellToLocalRect(sf::IntRect rect)const{
+		return {rect.getPosition().cwiseMul(Grid.CellSize), rect.getSize().cwiseMul(Grid.CellSize)};
+	}
+
+	sf::IntRect CoverageCellLocalRect(sf::Vector2i coverage_index)const {
+		return CellToLocalRect(CoverageCellRect(coverage_index));
+	}
+
 	bool IsInBounds(sf::Vector2i coverage_index)const {
 		return coverage_index.x >= 0
 			&& coverage_index.x < CoverageGridSize.x
@@ -351,10 +359,43 @@ struct PathBuilder {
 		std::vector<sf::Vector2i> result;
 
 		for (auto point : VisitPoints) {
-			if(rect.contains(Grid.LocalPositionToCellIndex(point)))
+			auto cell = Grid.LocalPositionToCellIndex(point);
+
+			if(cell.x == -1)
+				Println("Error");
+
+			if(rect.contains(cell))
 				result.push_back(point);
 		}
 
+		return result;
+	}
+
+	bool HasAnyOccupied(sf::Vector2i coverage)const {
+		auto rect = CoverageCellRect(coverage);
+
+		for (auto cell : Grid.OccupiedIndices) {
+			if(rect.contains(cell))
+				return true;
+		}
+		return false;
+	}
+
+	std::vector<sf::Vector2i> GatherCoverageVisitPointsInRadius(sf::Vector2i coverage_cell, sf::Vector2i dims = {1, 1})const {
+		std::vector<sf::Vector2i> result;
+		
+		dims -= sf::Vector2i(1, 1);
+		auto start = coverage_cell - dims;
+		auto end = coverage_cell + dims;
+
+		for (int x = start.x; x <= end.x; x++) {
+			for (int y = start.y; y <= end.y; y++) {
+				auto points = GatherCoverageVisitPoints({x, y});
+
+				std::copy(points.begin(), points.end(), std::back_inserter(result));
+			}				
+		}
+		
 		return result;
 	}
 
@@ -388,7 +429,7 @@ struct PathBuilder {
 
 
 
-	std::vector<sf::Vector2i> GetSortedReachableVisitPointsNotVisited(sf::Vector2i src_coverage, sf::Vector2i dst_coverage, sf::Vector2i src_local, const std::vector<sf::Vector2i> &visited)const{
+	std::vector<sf::Vector2i> GetSortedReachableVisitPointsNotVisited(sf::Vector2i src_coverage, sf::Vector2i dst_coverage, sf::Vector2i src_local, sf::Vector2i dir_local, const std::vector<sf::Vector2i> &visited)const{
 		sf::Vector2i direction = src_coverage - dst_coverage;
 		auto axis_aligned_direction = AxisAlignedDirection2D::Make(direction);
 
@@ -399,7 +440,7 @@ struct PathBuilder {
 
 		std::vector<sf::Vector2i> reachable_visit_points;
 
-		for (auto point : GatherCoverageVisitPoints(dst_coverage)) {
+		for (auto point : GatherCoverageVisitPointsInRadius(dst_coverage, {2, 2})) {
 			
 			if(!AreDirectlyReachable(src_local, point))
 				continue;
@@ -410,11 +451,24 @@ struct PathBuilder {
 			reachable_visit_points.push_back(point);
 		}
 
-		auto Compare = [dir = axis_aligned_direction.value()](sf::Vector2i left, sf::Vector2i right) {
-			return At(left, dir.Axis) * dir.Direction > At(right, dir.Axis) * dir.Direction;
+		auto CompareByDirectionThenLength = [src_local, dir = axis_aligned_direction.value()](sf::Vector2i left, sf::Vector2i right) {
+			auto l = At(left, dir.Axis) * dir.Direction;
+			auto r = At(right, dir.Axis) * dir.Direction;
+			
+			if(l == r)
+				return sf::Vector2f(left - src_local).length() < sf::Vector2f(right - src_local).length();
+
+			return l > r;
+		};
+
+		auto CompareByDot = [src_local, dir_local = sf::Vector2f(dir_local).normalized()](sf::Vector2i left, sf::Vector2i right) {
+			auto left_dir = sf::Vector2f(left - src_local).normalized();
+			auto right_dir = sf::Vector2f(right - src_local).normalized();
+
+			return left_dir.dot(dir_local) > right_dir.dot(dir_local);
 		};
 		
-		std::sort(reachable_visit_points.begin(), reachable_visit_points.end(), Compare);
+		std::sort(reachable_visit_points.begin(), reachable_visit_points.end(), CompareByDot);
 		
 		return reachable_visit_points;
 	}
@@ -429,13 +483,6 @@ struct PathBuilder {
 	}
 
 	std::vector<sf::Vector2i> BuildPath(sf::Vector2i start_position)const{
-		static const sf::Vector2i directions[] = {
-			{ 0, 1},
-			{ 1, 0},
-			{ 0,-1},
-			{-1, 0},
-		};
-
 
 		if (!Grid.Bounds.contains(start_position)) {
 			LogEnv(Error, "Start is not in the bounds");
@@ -459,6 +506,8 @@ struct PathBuilder {
 		
 		for(;;) {
 			auto src_local = path.back();
+
+			sf::Vector2i dir_local = path.size() >= 2 ? path.back() - *(path.end()-2) : sf::Vector2i(0, -1);
 			
 			sf::Vector2i coverage_direction = src_coverage - prev_coverage;
 
@@ -471,15 +520,15 @@ struct PathBuilder {
 				if(!IsInBounds(dst_coverage))
 					continue;
 
-				points = GetSortedReachableVisitPointsNotVisited(src_coverage, dst_coverage, src_local, path);
-
+				points = GetSortedReachableVisitPointsNotVisited(src_coverage, dst_coverage, src_local, dir_local, path);
+				
 				if(points.size())
 					break;
 			}
 			
 			if(!points.size())
 				break;
-
+			points.resize(1);
 			std::copy(points.begin(), points.end(), std::back_inserter(path));
 			prev_coverage = src_coverage;
 			src_coverage = dst_coverage;
@@ -598,7 +647,7 @@ void Environment::Draw(sf::RenderTarget& rt, std::size_t path_drawing_mode) {
 
 
 	for (const auto &wall : Walls)
-		Render::DrawLine(rt, wall.Start, wall.End, WallHeight);
+		Render::DrawLine(rt, wall.Start, wall.End, RenderWallHeight);
 }
 
 static void DrawForCell(const PathBuilder& builder, sf::RenderTarget& rt, sf::Vector2i coverage_cell, bool zone, bool full_zone, bool points, bool cell_outline) {
@@ -643,7 +692,22 @@ void Environment::DrawZones(sf::RenderTarget& rt, sf::Vector2i world_mouse_posit
 			Render::DrawRect(rt, Grid.Bounds.getPosition() + cell.cwiseMul(Grid.CellSize), Grid.CellSize);
 		}
 	}
+#if 0
+	if (true) {
+		for(int x = 0; x < builder.CoverageGridSize.x; x++){
+			for(int y = 0; y < builder.CoverageGridSize.y; y++){
+				sf::Vector2i coverage_cell(x, y);
 
+				auto visit_points = builder.MakeVisitPoints(coverage_cell);
+				if(visit_points.size() > 1 || builder.HasAnyOccupied(coverage_cell))
+				{
+					for (auto point : visit_points)
+						Render::DrawCircle(rt, builder.Grid.Bounds.getPosition() + point, 5.f, sf::Color::Green);
+				}
+			}
+		}
+	}
+#else
 	if(!for_all_cells){
 		auto cell = Grid.PositionToCellIndex(world_mouse_position);
 
@@ -662,6 +726,7 @@ void Environment::DrawZones(sf::RenderTarget& rt, sf::Vector2i world_mouse_posit
 			}
 		}
 	}
+#endif
 }
 
 void Environment::SaveToFile(const std::string& filename) {

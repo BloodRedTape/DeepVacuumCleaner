@@ -57,6 +57,8 @@ void MapEditor::OnImGui() {
 	ImGui::Text("DrawCalls: %d", (int)Render::s_DrawcallsCount);
 	ImGui::Separator();
 
+	ImGui::Text("Wall align key: %s", sf::Keyboard::getDescription(sf::Keyboard::Scancode::LShift).toAnsiString().c_str());
+
 	ImGui::Text("Walls: %d", m_Env.Walls.size());
 	ImGui::Text("Points: %d", m_Env.Path.size());
 
@@ -118,7 +120,7 @@ void MapEditor::Render(sf::RenderTarget& rt) {
 
 	m_Env.DrawZones(
 		rt, 
-		sf::Vector2i(m_Window.mapPixelToCoords(sf::Vector2i(MousePosition()))), 
+		WorldMousePosition(),
 		m_CoveragePathDebugging && m_ForAllCells,
 		m_CoveragePathDebugging && m_DrawZoneDecomposition, 
 		m_CoveragePathDebugging && m_DrawFullZoneDecomposition, 
@@ -129,8 +131,7 @@ void MapEditor::Render(sf::RenderTarget& rt) {
 
 
 	if (m_WallBegin.has_value()) {
-		auto point = sf::Vector2i(m_Window.mapPixelToCoords(sf::Vector2i(MousePosition())));
-		Render::DrawLine(rt, m_WallBegin.value(), point, WallHeight);
+		Render::DrawLine(rt, m_WallBegin.value(), MakeEndPoint(), WallHeight);
 	}
 
 	m_Cleaner.Draw(rt);
@@ -142,7 +143,7 @@ void MapEditor::OnEvent(const sf::Event& e){
 
 	if(!ImGui::GetIO().WantCaptureMouse){
 		if (const auto* mouse = e.getIf<sf::Event::MouseButtonPressed>()) {
-			auto point = sf::Vector2i(m_Window.mapPixelToCoords({mouse->position.x, mouse->position.y}));
+			auto point = WorldMousePosition();
 		
 			if(mouse->button == sf::Mouse::Button::Left){
 
@@ -151,15 +152,16 @@ void MapEditor::OnEvent(const sf::Event& e){
 			}
 
 			if(mouse->button == sf::Mouse::Button::Right){
+				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl))
+					point = TrySnap(point);
+
 				m_WallBegin = point;
 			}
 		}
 
 		if (const auto *mouse = e.getIf<sf::Event::MouseButtonReleased>()){
-			auto point = sf::Vector2i(m_Window.mapPixelToCoords({mouse->position.x, mouse->position.y}));
-
-			if(mouse->button == sf::Mouse::Button::Right){
-				m_Env.Walls.push_back({m_WallBegin.value(), point});
+			if(mouse->button == sf::Mouse::Button::Right && m_WallBegin.has_value()){
+				m_Env.Walls.push_back({m_WallBegin.value(), MakeEndPoint()});
 				m_WallBegin.reset();
 			}
 		}
@@ -175,4 +177,39 @@ void MapEditor::OnEvent(const sf::Event& e){
 void MapEditor::OnSave() {
 	m_Env.SaveToFile("test.map");
 	std::cout << "Saved\n";
+}
+
+sf::Vector2i MapEditor::MakeEndPoint() const{
+	sf::Vector2i point = WorldMousePosition();
+
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)) {
+		sf::Vector2i direction = (point - m_WallBegin.value());
+
+		if(std::abs(direction.x) < std::abs(direction.y))
+			point.x = m_WallBegin.value().x;
+		else
+			point.y = m_WallBegin.value().y;
+	}
+
+	if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl))
+		point = TrySnap(point);
+
+	return point;
+}
+
+sf::Vector2i MapEditor::WorldMousePosition() const{
+	return sf::Vector2i(m_Window.mapPixelToCoords(sf::Vector2i(MousePosition())));
+}
+
+sf::Vector2i MapEditor::TrySnap(sf::Vector2i point) const{
+	const float SnapDistance = 20.f;
+
+	for (auto wall : m_Env.Walls) {
+		if(sf::Vector2f(wall.Start - point).length() <= SnapDistance)
+			point = wall.Start;
+		if(sf::Vector2f(wall.End - point).length() <= SnapDistance)
+			point = wall.End;
+	}
+
+	return point;
 }

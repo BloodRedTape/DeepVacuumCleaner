@@ -24,7 +24,7 @@ private:
 
 	std::string m_MapFilename;
 
-	std::size_t m_PathDrawingMode = 0;
+	std::size_t m_PathDrawingMode = 2;
 
 	bool m_CoveragePathDebugging = true;
 	bool m_ForAllCells = true;
@@ -45,4 +45,10 @@ public:
 	void OnEvent(const sf::Event& e)override;
 
 	void OnSave();
+
+	sf::Vector2i MakeEndPoint()const;
+
+	sf::Vector2i WorldMousePosition()const;
+
+	sf::Vector2i TrySnap(sf::Vector2i point)const;
 };

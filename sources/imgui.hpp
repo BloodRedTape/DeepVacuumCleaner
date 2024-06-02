@@ -49,4 +49,16 @@ inline bool SimpleCombo(const char* name, bool* select, const char *true_option,
     return changed;
 }
 
+inline bool InputText(const char* label, std::string& buffer, ImGuiInputTextFlags flags = 0) {
+    return ImGui::InputText(label, buffer.data(), buffer.size() + 1, flags | ImGuiInputTextFlags_CallbackResize, [](ImGuiInputTextCallbackData *data)->int {
+        if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
+        {
+            std::string* str = (std::string*)data->UserData;
+            str->resize(data->BufTextLen);
+            data->Buf = str->data();
+        }
+        return 0;
+    }, &buffer);
+}
+
 }

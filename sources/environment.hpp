@@ -72,7 +72,7 @@ struct Environment {
 	GridDecomposition Grid;
 	std::size_t CoverageSize = 4;
 
-	static constexpr float WallHeight = 4.f;
+	int RenderWallHeight = 4.f;
 	static constexpr int NoPath = 0;
 	static constexpr int PathWithPoints = 1;
 	static constexpr int PathWithLines = 2;

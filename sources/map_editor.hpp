@@ -26,6 +26,8 @@ private:
 
 	std::size_t m_PathDrawingMode = 2;
 
+	int m_SnapGrid = 20;
+
 	bool m_CoveragePathDebugging = true;
 	bool m_ForAllCells = true;
 	bool m_DrawCurrentCell = false;
@@ -50,5 +52,7 @@ public:
 
 	sf::Vector2i WorldMousePosition()const;
 
-	sf::Vector2i TrySnap(sf::Vector2i point)const;
+	sf::Vector2i TryWallSnap(sf::Vector2i point)const;
+
+	sf::Vector2i TryGridSnap(sf::Vector2i point)const;
 };

@@ -4,17 +4,7 @@
 #include "imgui.h"
 #include "imgui.hpp"
 
-bool InputText(const char* label, std::string& buffer, ImGuiInputTextFlags flags = 0) {
-    return ImGui::InputText(label, buffer.data(), buffer.size() + 1, flags | ImGuiInputTextFlags_CallbackResize, [](ImGuiInputTextCallbackData *data)->int {
-        if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
-        {
-            std::string* str = (std::string*)data->UserData;
-            str->resize(data->BufTextLen);
-            data->Buf = str->data();
-        }
-        return 0;
-    }, &buffer);
-}
+#define EDITOR_WITH_PATH 0
 
 MapEditor::MapEditor(sf::Vector2i world_size):
 	ZoomMoveApplication(world_size)
@@ -55,6 +45,8 @@ void MapEditor::OnImGui() {
 
 	ImGui::Text("Framerate: %f", ImGui::GetIO().Framerate);
 	ImGui::Text("DrawCalls: %d", (int)Render::s_DrawcallsCount);
+	ImGui::InputInt("SnapGrid", &m_SnapGrid);
+	ImGui::InputInt("WallThickness", &m_Env.RenderWallHeight);
 	ImGui::Separator();
 
 	ImGui::Text("Wall align key: %s", sf::Keyboard::getDescription(sf::Keyboard::Scancode::LShift).toAnsiString().c_str());
@@ -65,7 +57,7 @@ void MapEditor::OnImGui() {
 	if(ImGui::Button("Clear"))
 		m_Env.Clear();
 
-	InputText("Filename", m_MapFilename);
+	ImGui::InputText("Filename", m_MapFilename);
 	if (ImGui::Button("Save")) {
 		m_Env.SaveToFile(m_MapFilename + ".map");
 	}
@@ -131,7 +123,7 @@ void MapEditor::Render(sf::RenderTarget& rt) {
 
 
 	if (m_WallBegin.has_value()) {
-		Render::DrawLine(rt, m_WallBegin.value(), MakeEndPoint(), WallHeight);
+		Render::DrawLine(rt, m_WallBegin.value(), MakeEndPoint(), m_Env.RenderWallHeight);
 	}
 
 	m_Cleaner.Draw(rt);
@@ -144,16 +136,19 @@ void MapEditor::OnEvent(const sf::Event& e){
 	if(!ImGui::GetIO().WantCaptureMouse){
 		if (const auto* mouse = e.getIf<sf::Event::MouseButtonPressed>()) {
 			auto point = WorldMousePosition();
-		
+
+#if EDITOR_WITH_PATH
 			if(mouse->button == sf::Mouse::Button::Left){
 
 				if(std::find(m_Env.Path.begin(), m_Env.Path.end(), point) == m_Env.Path.end())
 					m_Env.Path.push_back(point);
 			}
-
+#endif
 			if(mouse->button == sf::Mouse::Button::Right){
+				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LAlt))
+					point = TryGridSnap(point);
 				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl))
-					point = TrySnap(point);
+					point = TryWallSnap(point);
 
 				m_WallBegin = point;
 			}
@@ -171,6 +166,11 @@ void MapEditor::OnEvent(const sf::Event& e){
 		if (key->code == sf::Keyboard::Key::S && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl)) {
 			OnSave();
 		}
+#if !EDITOR_WITH_PATH
+		if (key->code == sf::Keyboard::Key::Z && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl)) {
+			m_Env.Walls.pop_back();
+		}
+#endif
 	}
 }
 
@@ -191,8 +191,11 @@ sf::Vector2i MapEditor::MakeEndPoint() const{
 			point.y = m_WallBegin.value().y;
 	}
 
+	if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LAlt))
+		point = TryGridSnap(point);
+
 	if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl))
-		point = TrySnap(point);
+		point = TryWallSnap(point);
 
 	return point;
 }
@@ -201,7 +204,7 @@ sf::Vector2i MapEditor::WorldMousePosition() const{
 	return sf::Vector2i(m_Window.mapPixelToCoords(sf::Vector2i(MousePosition())));
 }
 
-sf::Vector2i MapEditor::TrySnap(sf::Vector2i point) const{
+sf::Vector2i MapEditor::TryWallSnap(sf::Vector2i point) const{
 	const float SnapDistance = 20.f;
 
 	for (auto wall : m_Env.Walls) {
@@ -213,3 +216,12 @@ sf::Vector2i MapEditor::TrySnap(sf::Vector2i point) const{
 
 	return point;
 }
+
+sf::Vector2i MapEditor::TryGridSnap(sf::Vector2i point) const{
+
+	point.x = (point.x / m_SnapGrid) * m_SnapGrid + m_SnapGrid / 2;
+	point.y = (point.y / m_SnapGrid) * m_SnapGrid + m_SnapGrid / 2;
+
+	return point;
+}
+

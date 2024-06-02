@@ -4,7 +4,6 @@
 
 constexpr float Eps = 0.001;
 
-constexpr float WallHeight = 4.f;
 constexpr float PointRadius = 5.f;
 
 constexpr float CleanerRadius = 60.f;

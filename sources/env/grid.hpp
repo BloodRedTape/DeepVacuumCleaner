@@ -9,7 +9,7 @@
 struct GridDecomposition {
 	std::vector<sf::Vector2i> OccupiedIndices;
 	sf::IntRect Bounds;
-	sf::Vector2i CellSize;
+	std::size_t CellSize;
 
 	void Draw(sf::RenderTarget& rt);
 
@@ -35,14 +35,16 @@ struct GridDecomposition {
 
 	sf::Vector2i GridPosition()const{ return Bounds.getPosition(); }
 
-	sf::FloatRect CellRectToAbsolute(sf::IntRect rect)const{ return {sf::Vector2f(GridPosition() + rect.getPosition().cwiseMul(CellSize)), sf::Vector2f(rect.getSize().cwiseMul(CellSize))}; }
+	sf::FloatRect CellRectToAbsolute(sf::IntRect rect)const{ return {sf::Vector2f(GridPosition() + rect.getPosition().cwiseMul(CellSizeVec())), sf::Vector2f(rect.getSize().cwiseMul(CellSizeVec()))}; }
 
 	sf::Vector2i Size()const;
+
+	sf::Vector2i CellSizeVec()const { return sf::Vector2i(CellSize, CellSize); }
 
 	void Clear() {
 		*this = GridDecomposition();
 	}
 
-	static GridDecomposition Make(sf::Vector2i cell_size, sf::IntRect bounds, const std::vector<Wall> &walls);
+	static GridDecomposition Make(std::size_t cell_size, sf::IntRect bounds, const std::vector<Wall> &walls);
 };
 

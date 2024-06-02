@@ -8,7 +8,7 @@
 #include <istream>
 #include "env/grid.hpp"
 #include "env/coverage.hpp"
-
+#include "config.hpp"
 
 struct Environment {
 	std::vector<sf::Vector2i> Path;
@@ -19,8 +19,9 @@ struct Environment {
 	CoverageDecomposition Coverage{Grid};
 
 	std::size_t CoverageSize = 4;
+	sf::Vector2i FrameSize;
 
-	int RenderWallHeight = 4.f;
+	int RenderWallHeight = 15.f;
 	static constexpr int NoPath = 0;
 	static constexpr int PathWithPoints = 1;
 	static constexpr int PathWithLines = 2;
@@ -37,7 +38,7 @@ struct Environment {
 
 	void LoadFromFile(const std::string& filename);
 
-	void AutogeneratePath(sf::Vector2i cell_size, sf::Vector2i start_position, int step);
+	void AutogeneratePath(std::size_t cell_size, sf::Vector2i start_position, int step);
 
 	sf::IntRect GatherBounds()const;
 

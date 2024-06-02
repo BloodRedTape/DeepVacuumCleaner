@@ -90,7 +90,7 @@ void Environment::DrawZones(sf::RenderTarget& rt, sf::Vector2i world_mouse_posit
 
 	if(debug_line_trace){
 		for (auto cell : Coverage.TraceLine(StartPosition - Grid.Bounds.getPosition(), world_mouse_position - Grid.Bounds.getPosition())) {
-			Render::DrawRect(rt, Grid.Bounds.getPosition() + cell.cwiseMul(Grid.CellSize), Grid.CellSize);
+			Render::DrawRect(rt, Grid.Bounds.getPosition() + cell.cwiseMul(Grid.CellSizeVec()), Grid.CellSizeVec());
 		}
 	}
 #if 0
@@ -154,10 +154,13 @@ void Environment::LoadFromFile(const std::string& filename) {
 	Walls = std::move(walls.value());
 }
 
-void Environment::AutogeneratePath(sf::Vector2i cell_size, sf::Vector2i start_position, int step) {
+void Environment::AutogeneratePath(std::size_t cell_size, sf::Vector2i start_position, int) {
 	LogEnvIf(Path.size(), Warning, "Path is already generated, overwriting");
 	Path.clear();
 	StartPosition = start_position;
+
+	Coverage.CoverageSize = (CleanerRadius * 2) / cell_size;
+	FrameSize = sf::Vector2i(cell_size, cell_size) * int(Coverage.CoverageSize);
 
 	sf::Clock cl;
 	Grid = GridDecomposition::Make(cell_size, GatherBounds(), Walls);
@@ -193,6 +196,8 @@ sf::IntRect Environment::GatherBounds()const {
 		max = Max(max, wall.Start);
 		max = Max(max, wall.End);
 	}
+	min -= FrameSize;
+	max += FrameSize;
 
 	return {min, max - min};
 }

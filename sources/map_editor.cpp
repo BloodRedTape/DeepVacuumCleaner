@@ -78,12 +78,10 @@ void MapEditor::OnImGui() {
 	ImGui::SimpleCombo("Path Drawing mode", &m_PathDrawingMode, {"None", "Points", "Line"});
 	ImGui::Checkbox("Draw Bounds", &m_DrawBounds);
 	ImGui::Checkbox("Draw Grid Decomposition", &m_DrawGridDecomposition);
-	ImGui::InputInt2("Grid Cell Size", &m_GridCellSize.x);
-	ImGui::Text("Vacuum size in cells: %d", (int)CleanerRadius * 2 / std::min(m_GridCellSize.x, m_GridCellSize.y));
-	ImGui::InputInt("Steps", &m_Steps);
+	ImGui::InputInt("Grid Cell Size", &m_GridCellSize);
 
 	if (ImGui::Button("Rebuild"))
-		m_Env.AutogeneratePath(m_GridCellSize, m_StartPosition, m_Steps);
+		m_Env.AutogeneratePath(m_GridCellSize, m_StartPosition, 0);
 
 	ImGui::Separator();
 

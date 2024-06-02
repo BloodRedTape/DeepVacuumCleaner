@@ -7,9 +7,9 @@ DEFINE_LOG_CATEGORY(Grid)
 
 void GridDecomposition::Draw(sf::RenderTarget& rt) {
 	sf::RectangleShape rect;
-	rect.setSize(sf::Vector2f(CellSize));
+	rect.setSize(sf::Vector2f(CellSize, CellSize));
 	for (auto occupied : OccupiedIndices) {
-		rect.setPosition(sf::Vector2f(Bounds.getPosition() + occupied.cwiseMul(CellSize)));
+		rect.setPosition(sf::Vector2f(Bounds.getPosition() + occupied.cwiseMul(CellSizeVec())));
 		rect.setFillColor(sf::Color(255, 255, 255, 80));
 		rt.draw(rect);
 	}
@@ -78,13 +78,13 @@ std::vector<sf::Vector2i> GridDecomposition::BuildPath(sf::Vector2i start_positi
 }
 
 
-GridDecomposition GridDecomposition::Make(sf::Vector2i cell_size, sf::IntRect bounds, const std::vector<Wall>& walls) {
+GridDecomposition GridDecomposition::Make(std::size_t cell_size, sf::IntRect bounds, const std::vector<Wall>& walls) {
 	GridDecomposition grid;
 	grid.CellSize = cell_size;
 	grid.Bounds = bounds;
 	
-	for (int x = 0; x < bounds.getSize().x / cell_size.x; x++) {
-		for (int y = 0; y < bounds.getSize().x / cell_size.x; y++) {
+	for (int x = 0; x < bounds.getSize().x / cell_size; x++) {
+		for (int y = 0; y < bounds.getSize().y / cell_size; y++) {
 			sf::FloatRect cell = (sf::FloatRect)grid.GetCellByIndex({x, y});
 
 			for (const auto& wall : walls) {
@@ -102,7 +102,7 @@ GridDecomposition GridDecomposition::Make(sf::Vector2i cell_size, sf::IntRect bo
 }
 
 sf::IntRect GridDecomposition::GetCellByIndex(sf::Vector2i index)const{
-	return {Bounds.getPosition() + sf::Vector2i(index.x, index.y).cwiseMul(CellSize), CellSize};
+	return {Bounds.getPosition() + sf::Vector2i(index.x, index.y).cwiseMul(CellSizeVec()), CellSizeVec() };
 }
 
 sf::Vector2i GridDecomposition::PositionToCellIndex(sf::Vector2i position)const{
@@ -113,11 +113,11 @@ sf::Vector2i GridDecomposition::LocalPositionToCellIndex(sf::Vector2i position) 
 	if(!verify(position.x >= 0 && position.y >= 0))
 		return sf::Vector2i(-1, -1);
 
-	return position.cwiseDiv(CellSize);
+	return position.cwiseDiv(CellSizeVec());
 }
 
 sf::Vector2i GridDecomposition::CellIndexToMiddlePosition(sf::Vector2i cell_index)const {
-	return Bounds.getPosition() + cell_index.cwiseMul(CellSize) + CellSize / 2;
+	return Bounds.getPosition() + cell_index.cwiseMul(CellSizeVec()) + CellSizeVec() / 2;
 }
 
 bool GridDecomposition::IsOccupied(sf::Vector2i cell_index)const {
@@ -145,7 +145,7 @@ bool GridDecomposition::IsOccupied(sf::IntRect rect) const{
 
 sf::Vector2i GridDecomposition::Size()const {
 	if(Bounds.getSize().x && Bounds.getSize().y)
-		return Bounds.getSize().cwiseDiv(CellSize);
+		return Bounds.getSize().cwiseDiv(CellSizeVec());
 	return {0, 0};
 }
 

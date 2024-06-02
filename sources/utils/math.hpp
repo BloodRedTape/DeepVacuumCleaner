@@ -4,7 +4,7 @@
 #include <optional>
 #include <SFML/System/Vector2.hpp>
 #include <SFML/Graphics/Transform.hpp>
-#include "utils/assert.hpp"
+#include "bsl/assert.hpp"
 
 namespace Math{
 

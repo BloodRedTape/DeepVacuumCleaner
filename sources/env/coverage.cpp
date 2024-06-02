@@ -3,7 +3,7 @@
 #include <algorithm>
 #include "bsl/log.hpp"
 #include "utils/math.hpp"
-#include "utils/assert.hpp"
+#include "bsl/assert.hpp"
 
 DEFINE_LOG_CATEGORY(Coverage)
 
@@ -16,8 +16,8 @@ CoverageDecomposition::CoverageDecomposition(GridDecomposition &grid, std::size_
 
 void CoverageDecomposition::Rebuild() {
 	CoverageGridSize = sf::Vector2i(
-		std::ceil(Grid.Bounds.getSize().x / (Grid.CellSize.x * float(CoverageSize))),
-		std::ceil(Grid.Bounds.getSize().y / (Grid.CellSize.y * float(CoverageSize)))
+		std::ceil(Grid.Bounds.getSize().x / (Grid.CellSize * float(CoverageSize))),
+		std::ceil(Grid.Bounds.getSize().y / (Grid.CellSize * float(CoverageSize)))
 	);
 
 	VisitPoints = MakeVisitPoints();
@@ -43,7 +43,7 @@ sf::IntRect CoverageDecomposition::CoverageCellRect(sf::Vector2i coverage_index)
 }
 
 sf::IntRect CoverageDecomposition::CellToLocalRect(sf::IntRect rect)const{
-	return {rect.getPosition().cwiseMul(Grid.CellSize), rect.getSize().cwiseMul(Grid.CellSize)};
+	return {rect.getPosition().cwiseMul(Grid.CellSizeVec()), rect.getSize().cwiseMul(Grid.CellSizeVec())};
 }
 
 sf::IntRect CoverageDecomposition::CoverageCellLocalRect(sf::Vector2i coverage_index)const {
@@ -170,7 +170,7 @@ std::vector<sf::Vector2i> CoverageDecomposition::MakeVisitPoints(sf::Vector2i co
 	std::vector<sf::Vector2i> points;
 
 	for (auto zone : full_coverage_zones) {
-		sf::IntRect absoule{zone.getPosition().cwiseMul(Grid.CellSize), zone.getSize().cwiseMul(Grid.CellSize)};
+		sf::IntRect absoule{zone.getPosition().cwiseMul(Grid.CellSizeVec()), zone.getSize().cwiseMul(Grid.CellSizeVec())};
 
 		points.push_back(absoule.getCenter());
 	}
@@ -196,6 +196,9 @@ std::vector<sf::Vector2i> CoverageDecomposition::GatherCoverageVisitPoints(sf::V
 	std::vector<sf::Vector2i> result;
 
 	for (auto point : VisitPoints) {
+		if(!Grid.Bounds.contains(Grid.Bounds.getPosition() + point))
+			continue;
+
 		auto cell = Grid.LocalPositionToCellIndex(point);
 
 		if(rect.contains(cell))

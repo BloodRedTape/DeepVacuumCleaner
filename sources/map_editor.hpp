@@ -15,7 +15,7 @@ private:
 	Environment m_Env;
 	VacuumCleaner m_Cleaner;
 
-	bool m_DrawBounds = true;
+	bool m_DrawBounds = false;
 	bool m_DrawGridDecomposition = true;
 	bool m_DrawNumbers = false;
 	

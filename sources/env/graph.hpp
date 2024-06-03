@@ -5,6 +5,7 @@
 #include <SFML/Graphics/RenderTarget.hpp>
 
 struct Neighbours{
+	bool HasAnyOccupied = false;
 	std::vector<sf::Vector2i> Neighbours;
 };
 
@@ -18,8 +19,14 @@ public:
 	{}
 
 	const Neighbours &operator[](const sf::Vector2i &point)const{
+		return At(point);
+	}
+
+	const Neighbours &At(const sf::Vector2i &point)const{
 		return m_Vertices[point];
 	}
+
+	bool IsReachable(sf::Vector2i source, sf::Vector2i dst)const;
 
 	void Draw(sf::RenderTarget &rt, sf::Vector2i offset = {0, 0})const;
 

@@ -19,3 +19,9 @@ struct BreadthSearchWithSortPathFinder: PathBuilder{
 
 	std::string Name()const override{return "Breadth First With Sort"; }
 };
+
+struct FirstNearWallPathBuilder : PathBuilder {
+	std::vector<sf::Vector2i> MakePath(const Environment &env)const override;
+
+	std::string Name()const override{return "First Near Wall"; }
+};

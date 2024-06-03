@@ -1,20 +1,43 @@
 #include "graph.hpp"
 #include "utils/render.hpp"
 
+bool Graph::IsReachable(sf::Vector2i source, sf::Vector2i dst) const{
+	std::vector<sf::Vector2i> path;
+	
+	path.push_back(source);
+	
+	for(int visited = 0; visited < path.size(); visited++){
+
+		const Neighbours &neighbours = At(path[visited]);
+		
+		for(auto point: neighbours.Neighbours){
+			if(point == dst)
+				return true;
+
+			path.push_back(point);
+		}
+	}
+
+	return false;
+}
+
 void Graph::Draw(sf::RenderTarget& rt, sf::Vector2i offset)const {
+	auto point_radius = 5.f;
 
 	for (const auto& [vertex, neighbours] : m_Vertices) {
 		for(const auto &neighbour: neighbours.Neighbours){
-			Render::DrawLine(rt, vertex + offset, neighbour + offset, 2.f, sf::Color::White);
+			auto src = vertex + offset;
+			auto dst = neighbour + offset;
+			auto dir = sf::Vector2f(dst - src).normalized();
+			Render::DrawLine(rt, src, dst, 2.f, sf::Color::White);
+			Render::DrawCircle(rt, dst - sf::Vector2i(dir * point_radius * 2.f), point_radius, sf::Color::Red);
 		}
 	}
 
 	for (const auto& [vertex, neighbours] : m_Vertices) {
-		Render::DrawCircle(rt, vertex + offset, 5.f, sf::Color::Green);
+		Render::DrawCircle(rt, vertex + offset, point_radius, sf::Color::Green);
 	}
 }
-
-
 
 Graph Graph::MakeFrom(const CoverageDecomposition& coverage_grid) {
 	std::unordered_map<sf::Vector2i, Neighbours> graph;
@@ -24,6 +47,7 @@ Graph Graph::MakeFrom(const CoverageDecomposition& coverage_grid) {
 		auto neighbours = coverage_grid.GatherNeighboursVisitPoints(coverage);
 
 		for (auto point : points) {
+			graph[point].HasAnyOccupied = coverage_grid.HasAnyOccupied(coverage);
 			auto &neighbour_points = graph[point].Neighbours;
 			std::copy(points.begin(), points.end(), std::back_inserter(neighbour_points));
 	
@@ -36,6 +60,7 @@ Graph Graph::MakeFrom(const CoverageDecomposition& coverage_grid) {
 					neighbour_points.push_back(neighbour);
 			}
 		}
+
 	});
 
 

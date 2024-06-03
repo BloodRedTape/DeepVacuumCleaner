@@ -8,6 +8,7 @@
 #include <istream>
 #include "env/grid.hpp"
 #include "env/coverage.hpp"
+#include "env/graph.hpp"
 #include "config.hpp"
 
 struct Environment {
@@ -17,6 +18,7 @@ struct Environment {
 	
 	GridDecomposition Grid;
 	CoverageDecomposition Coverage{Grid};
+	Graph CoverageGraph;
 
 	std::size_t CoverageSize = 4;
 	sf::Vector2i FrameSize;

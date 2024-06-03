@@ -68,6 +68,8 @@ struct CoverageDecomposition {
 
 	std::vector<sf::Vector2i> GatherCoverageVisitPointsInRadius(sf::Vector2i coverage_cell, sf::Vector2i dims = {1, 1})const;
 
+	std::vector<sf::Vector2i> GatherNeighboursVisitPoints(sf::Vector2i coverage_cell)const;
+
 	std::vector<sf::Vector2i> TraceLine(sf::Vector2i local_src, sf::Vector2i local_dst)const;
 	
 	bool AreDirectlyReachable(sf::Vector2i local_src, sf::Vector2i local_dst)const;

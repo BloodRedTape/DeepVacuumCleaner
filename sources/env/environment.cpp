@@ -54,6 +54,8 @@ void Environment::Draw(sf::RenderTarget& rt, std::size_t path_drawing_mode) {
 		}
 	}
 
+	CoverageGraph.Draw(rt, Grid.Bounds.getPosition());
+
 
 	for (const auto &wall : Walls)
 		Render::DrawLine(rt, wall.Start, wall.End, RenderWallHeight);
@@ -177,9 +179,11 @@ void Environment::AutogeneratePath(std::size_t cell_size, sf::Vector2i start_pos
 
 	Coverage.Rebuild();
 	LogEnv(Info, "Coverage Decomposition took % seconds", cl.restart().asSeconds());
+
+	CoverageGraph = Graph::MakeFrom(Coverage);
 	
 	if(build_path){
-		Path = Coverage.SimplePathAlgorithm(start_position);
+		Path = Coverage.BuildPath(start_position);
 		LogEnv(Info, "Path building took % seconds", cl.restart().asSeconds());
 	}
 }

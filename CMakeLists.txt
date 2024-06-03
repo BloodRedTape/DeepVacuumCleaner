@@ -27,7 +27,7 @@ add_executable (DeepVacuumCleaner
 	"sources/model/vacuum_cleaner_operator.cpp" 
 	"sources/model/evolution_training.cpp"
 	"sources/env/grid.cpp"
- "sources/env/coverage.cpp" "sources/env/wall.cpp")
+ "sources/env/coverage.cpp" "sources/env/wall.cpp" "sources/env/graph.cpp")
 
 target_include_directories(DeepVacuumCleaner PUBLIC "./sources")
 

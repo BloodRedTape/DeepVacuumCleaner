@@ -234,6 +234,21 @@ std::vector<sf::Vector2i> CoverageDecomposition::GatherCoverageVisitPointsInRadi
 	return result;
 }
 
+std::vector<sf::Vector2i> CoverageDecomposition::GatherNeighboursVisitPoints(sf::Vector2i coverage_cell) const{
+	auto neighbours = GatherCoverageVisitPointsInRadius(coverage_cell, {2, 2});
+	
+	auto actual = LocatedVisitPointsCache[coverage_cell];
+
+	for (auto point : actual) {
+		auto it = std::remove(neighbours.begin(), neighbours.end(), point);
+
+		if(verify(it != neighbours.end()))
+			neighbours.pop_back();
+	}
+
+	return neighbours;
+}
+
 std::vector<sf::Vector2i> CoverageDecomposition::GatherWallsCoverageVisitPoints()const {
 	std::vector<sf::Vector2i> points;
 

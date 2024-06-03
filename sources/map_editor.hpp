@@ -5,6 +5,7 @@
 #include "env/environment.hpp"
 #include "model/vacuum_cleaner.hpp"
 #include "application.hpp"
+#include "env/path.hpp"
 
 class MapEditor: public ZoomMoveApplication{
 	using Super = ZoomMoveApplication;
@@ -36,6 +37,10 @@ private:
 	bool m_DrawFullZoneDecomposition = false;
 	bool m_DrawCoveragePoints = false;
 	bool m_DrawWallsCoveragePoints = false;
+	bool m_DrawCoverageGraph = false;
+
+	std::vector<std::unique_ptr<PathBuilder>> m_Builders;
+	std::size_t m_Current = 0;
 public:
 
 	MapEditor(sf::Vector2i world_size);

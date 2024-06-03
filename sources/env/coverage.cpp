@@ -262,6 +262,19 @@ std::vector<sf::Vector2i> CoverageDecomposition::GatherWallsCoverageVisitPoints(
 	return points;
 }
 
+std::optional<sf::Vector2i> CoverageDecomposition::LocalNearestVisitPointTo(sf::Vector2i local_point) const{
+	auto cell = Grid.LocalPositionToCellIndex(local_point);
+
+	if(cell.x == -1 || cell.y == -1)
+		return std::nullopt;
+
+	auto coverage = GridToCoverageCell(cell);
+
+	auto visit = LocatedVisitPointsCache[coverage];
+
+	return visit.size() ? std::optional<sf::Vector2i>{visit.front()} : std::nullopt;
+}
+
 std::vector<sf::Vector2i> CoverageDecomposition::TraceLine(sf::Vector2i local_src, sf::Vector2i local_dst)const {
 	std::vector<sf::Vector2i> result;
 

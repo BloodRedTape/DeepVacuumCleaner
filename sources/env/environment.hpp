@@ -34,6 +34,10 @@ struct Environment {
 
 	void Draw(sf::RenderTarget& rt, std::size_t path_drawing_mode = 0);
 
+	void DrawGraph(sf::RenderTarget& rt)const {
+		CoverageGraph.Draw(rt, Grid.Bounds.getPosition());
+	}
+
 	void DrawZones(sf::RenderTarget &rt, sf::Vector2i mouse_position, bool for_all_cells, bool zone, bool full_zone, bool points, bool cell, bool walls);
 
 	void SaveToFile(const std::string& filename);

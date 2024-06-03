@@ -64,6 +64,8 @@ struct CoverageDecomposition {
 
 	std::vector<sf::Vector2i> GatherWallsCoverageVisitPoints()const;
 
+	std::optional<sf::Vector2i> LocalNearestVisitPointTo(sf::Vector2i local_point)const;
+
 	bool HasAnyOccupied(sf::Vector2i coverage)const;
 
 	std::vector<sf::Vector2i> GatherCoverageVisitPointsInRadius(sf::Vector2i coverage_cell, sf::Vector2i dims = {1, 1})const;

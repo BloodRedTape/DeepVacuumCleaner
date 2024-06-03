@@ -9,6 +9,8 @@ MapEditor::MapEditor(sf::Vector2i world_size):
 	ZoomMoveApplication(world_size)
 {
 	//m_Env.LoadFromFile("test.map");
+	m_Builders.push_back(std::make_unique<BreadthSearchPathFinder>());
+	m_Builders.push_back(std::make_unique<BreadthSearchWithSortPathFinder>());
 }
 
 void MapEditor::Tick(float dt) {
@@ -80,9 +82,19 @@ void MapEditor::OnImGui() {
 	ImGui::Checkbox("Draw Grid Decomposition", &m_DrawGridDecomposition);
 	ImGui::InputInt("Grid Cell Size", &m_GridCellSize);
 	
-	ImGui::Checkbox("Build Path", &m_BuildPath);
-	if (ImGui::Button("Rebuild"))
-		m_Env.AutogeneratePath(m_GridCellSize, m_StartPosition, m_BuildPath);
+	if (ImGui::Button("Bake"))
+		m_Env.AutogeneratePath(m_GridCellSize, m_StartPosition, false);
+	
+	std::vector<std::string> names;
+	for(const auto &builder: m_Builders)
+		names.push_back(builder->Name());
+
+	ImGui::SimpleCombo("Path Builder", &m_Current, names);
+	if(ImGui::Button("Build Path")){
+		m_Env.Path = m_Builders[m_Current]->MakePath(m_Env);
+		for(auto &point: m_Env.Path)
+			point += m_Env.Grid.Bounds.getPosition();
+	}
 
 	ImGui::Separator();
 
@@ -96,6 +108,7 @@ void MapEditor::OnImGui() {
 		ImGui::Checkbox("DrawFullZoneDecomposition", &m_DrawFullZoneDecomposition);
 		ImGui::Checkbox("DrawCoveragePoints", &m_DrawCoveragePoints);
 		ImGui::Checkbox("DrawWallsCoveragePoints", &m_DrawWallsCoveragePoints);
+		ImGui::Checkbox("DrawCoverageGraph", &m_DrawCoverageGraph);
 	}
 
 	ImGui::End();
@@ -119,6 +132,9 @@ void MapEditor::Render(sf::RenderTarget& rt) {
 		m_CoveragePathDebugging && m_DrawCurrentCell,
 		m_CoveragePathDebugging && m_DrawWallsCoveragePoints
 	);
+
+	if(m_CoveragePathDebugging && m_DrawCoverageGraph)
+		m_Env.DrawGraph(rt);
 	m_Env.Draw(rt, m_PathDrawingMode);
 
 

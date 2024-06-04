@@ -78,15 +78,18 @@ Graph Graph::MakeOptimizedFrom(const CoverageDecomposition& coverage_grid){
 		if(!points.size())
 			return;
 
+		std::unordered_map<sf::Vector2i, Neighbours> local_graph;
+
 		for (auto point : points) {
-			graph[point].HasAnyOccupied = coverage_grid.HasAnyOccupied(coverage);
-#define INTERCONNECT
-#ifdef INTERCONNECT
+			local_graph[point].HasAnyOccupied = coverage_grid.HasAnyOccupied(coverage);
+
 			//XXX Do this only all points inside AreDirectlyReachable
-			graph[point].AppendUnique(points);
-			graph[point].Remove(point);
-#endif
+			local_graph[point].AppendUnique(points);
+			local_graph[point].Remove(point);
 		}
+
+		for (const auto &[v, n] : local_graph)
+			graph[v] = n;
 
 		auto start = coverage - sf::Vector2i(1, 1);
 		auto end = coverage + sf::Vector2i(1, 1);
@@ -98,28 +101,16 @@ Graph Graph::MakeOptimizedFrom(const CoverageDecomposition& coverage_grid){
 
 				sf::Vector2i direction = sf::Vector2i(x, y) - coverage;
 
-				auto SortByDirection = [direction](sf::Vector2i l, sf::Vector2i r) {
-					auto lr = sf::Vector2f(r - l).normalized();
-
-					auto sort_dir = sf::Vector2f(direction).normalized();
-
-					return lr.dot(sort_dir) >= 0;
-				};
-
-				std::sort(points.begin(), points.end(), SortByDirection);
+				std::sort(points.begin(), points.end(), SortByDirection{direction});
 
 				auto edge_point = points.back();
-
-				auto SortByDistanceToEdgePoint = [edge_point](sf::Vector2i l, sf::Vector2i r) {
-					return sf::Vector2f(l - edge_point).length() < sf::Vector2f(r - edge_point).length();
-				};
 
 				auto neighbours = coverage_grid.LocatedVisitPointsCache[{x, y}];
 
 				if(!neighbours.size())
 					continue;
 				
-				std::sort(neighbours.begin(), neighbours.end(), SortByDistanceToEdgePoint);
+				std::sort(neighbours.begin(), neighbours.end(), SortByDistanceTo{edge_point});
 
 				//add nearest reachable one
 				for (auto neighbour : neighbours) {
@@ -157,4 +148,14 @@ void Neighbours::Remove(sf::Vector2i point){
 
 	if(it != Neighbours.end())
 		Neighbours.pop_back();
+}
+
+bool SortByDirection::operator()(sf::Vector2i l, sf::Vector2i r) const{
+	auto sort_dir = sf::Vector2f(Direction).normalized();
+
+	return sf::Vector2f(l).dot(sort_dir) < sf::Vector2f(r).dot(sort_dir);
+}
+
+bool SortByDistanceTo::operator()(sf::Vector2i l, sf::Vector2i r) const{
+	return sf::Vector2f(l - Point).length() < sf::Vector2f(r - Point).length();
 }

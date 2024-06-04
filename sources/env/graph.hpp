@@ -4,6 +4,18 @@
 #include <unordered_map>
 #include <SFML/Graphics/RenderTarget.hpp>
 
+struct SortByDirection {
+	sf::Vector2i Direction;
+
+	bool operator()(sf::Vector2i l, sf::Vector2i r)const;
+};
+
+struct SortByDistanceTo {
+	sf::Vector2i Point;
+
+	bool operator()(sf::Vector2i l, sf::Vector2i r)const;
+};
+
 struct Neighbours{
 	bool HasAnyOccupied = false;
 	std::vector<sf::Vector2i> Neighbours;

@@ -7,6 +7,14 @@
 struct Neighbours{
 	bool HasAnyOccupied = false;
 	std::vector<sf::Vector2i> Neighbours;
+
+	void AddUnique(sf::Vector2i neighbour);
+
+	void AppendUnique(const sf::Vector2i *points, std::size_t count);
+
+	void AppendUnique(const std::vector<sf::Vector2i> &points);
+
+	void Remove(sf::Vector2i point);
 };
 
 class Graph {
@@ -32,4 +40,6 @@ public:
 
 
 	static Graph MakeFrom(const CoverageDecomposition &coverage);
+
+	static Graph MakeOptimizedFrom(const CoverageDecomposition &coverage);
 };

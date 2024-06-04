@@ -177,7 +177,7 @@ void Environment::AutogeneratePath(std::size_t cell_size, sf::Vector2i start_pos
 	Coverage.Rebuild();
 	LogEnv(Info, "Coverage Decomposition took % seconds", cl.restart().asSeconds());
 
-	CoverageGraph = Graph::MakeFrom(Coverage);
+	CoverageGraph = Graph::MakeOptimizedFrom(Coverage);
 	LogEnv(Info, "Graph took % seconds", cl.restart().asSeconds());
 	
 	if(build_path){

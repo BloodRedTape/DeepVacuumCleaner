@@ -73,8 +73,8 @@ std::vector<sf::Vector2i> FirstNearWallPathBuilder::MakePath(const Environment& 
 		auto source = path[visited];
 		auto neighbours = graph[source].Neighbours;
 
-		std::sort(neighbours.begin(), neighbours.end(), [source](sf::Vector2i l, sf::Vector2i r) {
-			return sf::Vector2f(l - source).length() < sf::Vector2f(r - source).length();
+		std::sort(neighbours.begin(), neighbours.end(), [](sf::Vector2i l, sf::Vector2i r) {
+			return sf::Vector2f(l).length() < sf::Vector2f(r).length();
 		});
 		
 		for(auto point: neighbours){

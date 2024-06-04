@@ -11,6 +11,7 @@ MapEditor::MapEditor(sf::Vector2i world_size):
 	//m_Env.LoadFromFile("test.map");
 	m_Builders.push_back(std::make_unique<BreadthSearchPathFinder>());
 	m_Builders.push_back(std::make_unique<BreadthSearchWithSortPathFinder>());
+	m_Builders.push_back(std::make_unique<FirstNearWallPathBuilder>());
 }
 
 void MapEditor::Tick(float dt) {

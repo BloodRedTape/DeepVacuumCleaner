@@ -1,5 +1,6 @@
 #include "graph.hpp"
 #include "utils/render.hpp"
+#include "utils/math.hpp"
 
 void Graph::MakeConnection(sf::Vector2i src, sf::Vector2i dst, bool is_oriented){
 	m_Vertices[src].AddUnique(dst);
@@ -28,23 +29,27 @@ bool Graph::IsReachable(sf::Vector2i source, sf::Vector2i dst) const{
 	return false;
 }
 
+
 void Graph::Draw(sf::RenderTarget& rt, sf::Vector2i offset, bool draw_directions)const {
-	auto point_radius = 5.f;
 
-	for (const auto& [vertex, neighbours] : m_Vertices) {
-		for(const auto &neighbour: neighbours.Neighbours){
-			auto src = vertex + offset;
-			auto dst = neighbour + offset;
-			auto dir = sf::Vector2f(dst - src).normalized();
-			Render::DrawLine(rt, src, dst, 2.f, sf::Color::White);
-			if(draw_directions)
-				Render::DrawCircle(rt, dst - sf::Vector2i(dir * point_radius * 2.f), point_radius, sf::Color::Red);
-		}
+	for (const auto& [vertex, _] : m_Vertices) {
+		DrawVertex(rt, vertex, offset, draw_directions);
+	}
+}
+
+void Graph::DrawVertex(sf::RenderTarget& rt, sf::Vector2i vertex, sf::Vector2i offset, bool draw_directions) const	{
+	auto RenderPointRadius = 5.f;
+	const auto &neighbours = m_Vertices[vertex];
+	for(const auto &neighbour: neighbours.Neighbours){
+		auto src = vertex + offset;
+		auto dst = neighbour + offset;
+		auto dir = sf::Vector2f(dst - src).normalized();
+		Render::DrawLine(rt, src, dst, 2.f, sf::Color::White);
+		if(draw_directions)
+			Render::DrawCircle(rt, dst - sf::Vector2i(dir * RenderPointRadius * 2.f), RenderPointRadius, sf::Color::Red);
 	}
 
-	for (const auto& [vertex, neighbours] : m_Vertices) {
-		Render::DrawCircle(rt, vertex + offset, point_radius, sf::Color::Green);
-	}
+	Render::DrawCircle(rt, vertex + offset, RenderPointRadius, sf::Color::Green);
 }
 
 Graph Graph::MakeFrom(const CoverageDecomposition& coverage_grid) {
@@ -85,18 +90,22 @@ Graph Graph::MakeOptimizedFrom(const CoverageDecomposition& coverage_grid){
 		if(!points.size())
 			return;
 
-		std::unordered_map<sf::Vector2i, Neighbours> local_graph;
+		//std::unordered_map<sf::Vector2i, Neighbours> local_graph;
 
 		for (auto point : points) {
-			local_graph[point].HasAnyOccupied = coverage_grid.HasAnyOccupied(coverage);
+			graph[point].HasAnyOccupied = coverage_grid.HasAnyOccupied(coverage);
 
 			//XXX Do this only all points inside AreDirectlyReachable
-			local_graph[point].AppendUnique(points);
-			local_graph[point].Remove(point);
+			for (auto neighbour : points) {
+				if (neighbour != point) {
+					graph[point].AddUnique(neighbour);
+					graph[neighbour].AddUnique(point);
+				}
+			}
 		}
 
-		for (const auto &[v, n] : local_graph)
-			graph[v] = n;
+		//for (const auto &[v, n] : local_graph)
+		//	graph[v] = n;
 
 		auto start = coverage - sf::Vector2i(1, 1);
 		auto end = coverage + sf::Vector2i(1, 1);
@@ -166,4 +175,9 @@ bool SortByDirection::operator()(sf::Vector2i l, sf::Vector2i r) const{
 
 bool SortByDistanceTo::operator()(sf::Vector2i l, sf::Vector2i r) const{
 	return sf::Vector2f(l - Point).length() < sf::Vector2f(r - Point).length();
+}
+
+bool SortByAngleCouterClockwize::operator()(sf::Vector2i l, sf::Vector2i r) const{
+	auto forward = sf::Vector2f(Forward);
+	return Math::AngleCouterClockwize(forward, sf::Vector2f(l - Center)) < Math::AngleCouterClockwize(forward, sf::Vector2f(r - Center));
 }

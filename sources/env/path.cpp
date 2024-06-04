@@ -3,6 +3,16 @@
 #include "bsl/assert.hpp"
 #include "bsl/log.hpp"
 
+
+std::optional<sf::Vector2i> PathBuilder::FindFirstUnvisited(const Environment& env, const std::vector<sf::Vector2i>& candidates, const std::vector<sf::Vector2i>& path)const {
+	for (auto next : candidates) {
+		if (std::find(path.begin(), path.end(), next) == path.end()) {
+			return std::make_optional(next);
+		}
+	}
+	return std::optional<sf::Vector2i>();
+}
+
 std::vector<sf::Vector2i> BreadthSearchPathFinder::MakePath(const Environment& env)const {
 	const auto &graph = env.CoverageGraph;
 
@@ -104,15 +114,6 @@ std::vector<sf::Vector2i> DirectionSortPathBuilder::MakePath(const Environment& 
 		return {};
 
 	path.push_back(start_nearest.value());
-	
-	auto GetFirstUnvisited = [&](const std::vector<sf::Vector2i> &candidates){
-		for (auto next : candidates) {
-			if (std::find(path.begin(), path.end(), next) == path.end()) {
-				return std::make_optional(next);
-			}
-		}
-		return std::optional<sf::Vector2i>();
-	};
 
 	auto TryGetPoint = [&](size_t last_index)->std::optional<sf::Vector2i>{
 		if(last_index == 0)
@@ -128,7 +129,7 @@ std::vector<sf::Vector2i> DirectionSortPathBuilder::MakePath(const Environment& 
 
 		std::sort(neighbours.rbegin(), neighbours.rend(), SortByDirection{ direction });
 
-		return GetFirstUnvisited(neighbours);
+		return FindFirstUnvisited(env, neighbours, path);
 	};
 
 	auto TryGetPointPropagate = [&]()->std::vector<sf::Vector2i>{
@@ -163,6 +164,51 @@ std::vector<sf::Vector2i> DirectionSortPathBuilder::MakePath(const Environment& 
 		//path.push_back(next.value());
 	}
 
+
+	return path;
+}
+
+std::vector<sf::Vector2i> RightFirstPathBuilder::MakePath(const Environment& env) const{
+	const auto &graph = env.CoverageGraph;
+
+	std::vector<sf::Vector2i> path;
+
+	auto start = env.LocalStartPosition();
+	auto start_nearest = env.LocalNearestToStartPosition();
+
+	if(!start_nearest.has_value())	
+		return {};
+
+	path.push_back(start);
+	path.push_back(start_nearest.value());
+
+	auto TryGetPoint = [&](std::size_t end)->std::optional<sf::Vector2i>{
+		if(end == 0)
+			return std::nullopt;
+
+		auto point = path[end];
+		auto direction = point - path[end - 1];
+
+		sf::Vector2i right(sf::Vector2f(direction).rotatedBy(sf::degrees(-90)));
+
+		std::vector<sf::Vector2i> neighbours = graph[point].Neighbours;
+
+		if (!verify(neighbours.size()))
+			return std::nullopt;
+
+		std::sort(neighbours.begin(), neighbours.end(), SortByAngleCouterClockwize{ right, point });
+
+		return FindFirstUnvisited(env, neighbours, path);
+	};
+
+	for (;;) {
+		auto next = TryGetPoint(path.size() - 1);
+
+		if(!next.has_value())
+			break;
+
+		path.push_back(next.value());
+	}
 
 	return path;
 }

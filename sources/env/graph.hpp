@@ -16,6 +16,13 @@ struct SortByDistanceTo {
 	bool operator()(sf::Vector2i l, sf::Vector2i r)const;
 };
 
+struct SortByAngleCouterClockwize{
+	sf::Vector2i Forward;
+	sf::Vector2i Center;
+
+	bool operator()(sf::Vector2i l, sf::Vector2i r)const;
+};
+
 struct Neighbours{
 	bool HasAnyOccupied = false;
 	std::vector<sf::Vector2i> Neighbours;
@@ -51,6 +58,8 @@ public:
 	bool IsReachable(sf::Vector2i source, sf::Vector2i dst)const;
 
 	void Draw(sf::RenderTarget &rt, sf::Vector2i offset = {0, 0}, bool draw_directions = false)const;
+
+	void DrawVertex(sf::RenderTarget &rt, sf::Vector2i vertex, sf::Vector2i offset = {0, 0}, bool draw_directions = false)const;
 
 
 	static Graph MakeFrom(const CoverageDecomposition &coverage);

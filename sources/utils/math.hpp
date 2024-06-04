@@ -132,6 +132,21 @@ namespace Math{
 		return std::isinf(num) || std::isnan(num);
 	}
 
+	inline float Clamp(float value, float min, float max) {
+		if (value < min) return min;
+		if (value > max) return max;
+		return value;
+	}
+
+	inline float AngleCouterClockwize(const sf::Vector2f& v1, const sf::Vector2f& v2) {
+		int angle = v1.angleTo(v2).asDegrees();
+
+		if(angle < 0)
+			angle += 360;
+		
+		return angle % 360;
+	}
+
 }//namespace Math::
 
 

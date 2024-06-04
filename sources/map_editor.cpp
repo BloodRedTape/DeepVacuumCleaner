@@ -13,6 +13,7 @@ MapEditor::MapEditor(sf::Vector2i world_size):
 	m_Builders.push_back(std::make_unique<BreadthSearchWithSortPathFinder>());
 	m_Builders.push_back(std::make_unique<FirstNearWallPathBuilder>());
 	m_Builders.push_back(std::make_unique<DirectionSortPathBuilder>());
+	m_Builders.push_back(std::make_unique<RightFirstPathBuilder>());
 
 	m_Current = m_Builders.size() - 1;
 }
@@ -141,7 +142,7 @@ void MapEditor::Render(sf::RenderTarget& rt) {
 	);
 
 	if(m_CoveragePathDebugging && m_DrawCoverageGraph)
-		m_Env.DrawGraph(rt, m_DrawCoverageGraphDirecions);
+		m_Env.DrawGraph(rt, m_DrawCoverageGraphDirecions, WorldMousePosition());
 	m_Env.Draw(rt, m_PathDrawingMode);
 
 
@@ -167,6 +168,13 @@ void MapEditor::OnEvent(const sf::Event& e){
 					m_Env.Path.push_back(point);
 			}
 #endif
+#define EDITOR_WITH_START 1
+#if EDITOR_WITH_START
+			if(mouse->button == sf::Mouse::Button::Left){
+				m_Env.StartPosition = (point);
+			}
+#endif
+
 			if(mouse->button == sf::Mouse::Button::Right){
 				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LAlt))
 					point = TryGridSnap(point);

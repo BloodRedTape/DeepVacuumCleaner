@@ -2,10 +2,12 @@
 #include "map_editor.hpp"
 #include "model/evolution_training.hpp"
 #include "utils/imgui.hpp"
+#include "utils/math.hpp"
 #include <iostream>
 #include <sstream>
 #include <filesystem>
 #include <bsl/file.hpp>
+#include <bsl/log.hpp>
 
 class EvolutionTrainingApp: public ZoomMoveApplication{
 	using Super = ZoomMoveApplication;
@@ -95,6 +97,11 @@ std::unique_ptr<Application> MakeApp<EvolutionTrainingApp>(sf::Vector2i size) {
 int main()
 {
 	srand(time(0));
+
+
+	Println("%", Math::AngleCouterClockwize(sf::Vector2f(0, 1), sf::Vector2f(-1, 0)));
+	Println("%", Math::AngleCouterClockwize(sf::Vector2f(0, 1), sf::Vector2f(0, -1)));
+	Println("%", Math::AngleCouterClockwize(sf::Vector2f(0, 1), sf::Vector2f(1, 0)));
 
 	std::filesystem::current_path("../../../run_tree");
 

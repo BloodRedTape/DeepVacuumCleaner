@@ -35,8 +35,16 @@ struct Environment {
 
 	void Draw(sf::RenderTarget& rt, std::size_t path_drawing_mode = 0);
 
-	void DrawGraph(sf::RenderTarget& rt, bool with_directions)const {
+	void DrawGraph(sf::RenderTarget& rt, bool with_directions, sf::Vector2i world_mouse)const {
+#ifndef GRAPH_DEBUG
 		CoverageGraph.Draw(rt, Grid.Bounds.getPosition(), with_directions);
+#else
+		auto visit = Coverage.LocalNearestVisitPointTo(world_mouse - Grid.Bounds.getPosition());
+
+		if (visit.has_value()) {
+			CoverageGraph.DrawVertex(rt, visit.value(), Grid.Bounds.getPosition(), with_directions);
+		}
+#endif
 	}
 
 	void DrawZones(sf::RenderTarget &rt, sf::Vector2i mouse_position, bool for_all_cells, bool zone, bool full_zone, bool points, bool cell, bool walls);

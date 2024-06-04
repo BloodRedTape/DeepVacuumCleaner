@@ -159,32 +159,52 @@ Graph Graph::MakeFrom(const CoverageDecomposition& coverage_grid) {
 	return {std::move(graph)};
 }
 
+
+bool Equal(const SortByDirection& comp, const sf::Vector2i& a, const sf::Vector2i& b) {
+    return !comp(a, b) && !comp(b, a);
+}
+
+std::vector<sf::Vector2i> GetFirstEqualRange(const std::vector<sf::Vector2i>& points, const sf::Vector2i& direction) {
+
+    std::vector<sf::Vector2i> result;
+
+    if (points.empty()) return result;
+
+	if(direction.x && direction.y)
+		return {points.front()};
+
+    for (size_t i = 0; i < points.size(); ++i) {
+        if (i == 0 || Equal(SortByDirection{direction}, points[0], points[i])) {
+            result.push_back(points[i]);
+        } else {
+            break;
+        }
+    }
+
+    return result;
+}
+
 Graph Graph::MakeOptimizedFrom(const CoverageDecomposition& coverage_grid){
 	std::unordered_map<sf::Vector2i, Neighbours> graph;
 
 	coverage_grid.ForEachCoverage([&](sf::Vector2i coverage) {
 		auto points = coverage_grid.LocatedVisitPointsCache[coverage];
-		//auto neighbours = coverage_grid.GatherNeighboursVisitPoints(coverage);
-
+			
 		if(!points.size())
 			return;
-
-		//std::unordered_map<sf::Vector2i, Neighbours> local_graph;
 
 		for (auto point : points) {
 			graph[point].HasAnyOccupied = coverage_grid.HasAnyOccupied(coverage);
 
 			//XXX Do this only all points inside AreDirectlyReachable
 			for (auto neighbour : points) {
-				if (neighbour != point) {
-					graph[point].AddUnique(neighbour);
-					graph[neighbour].AddUnique(point);
-				}
+				if (neighbour == point)
+					continue;
+
+				graph[point].AddUnique(neighbour);
+				graph[neighbour].AddUnique(point);
 			}
 		}
-
-		//for (const auto &[v, n] : local_graph)
-		//	graph[v] = n;
 
 		auto start = coverage - sf::Vector2i(1, 1);
 		auto end = coverage + sf::Vector2i(1, 1);
@@ -196,26 +216,27 @@ Graph Graph::MakeOptimizedFrom(const CoverageDecomposition& coverage_grid){
 
 				sf::Vector2i direction = sf::Vector2i(x, y) - coverage;
 
-				std::sort(points.begin(), points.end(), SortByDirection{direction});
-
-				auto edge_point = points.back();
-
-				auto neighbours = coverage_grid.LocatedVisitPointsCache[{x, y}];
-
-				if(!neighbours.size())
-					continue;
+				std::sort(points.rbegin(), points.rend(), SortByDirection{direction});
 				
-				std::sort(neighbours.begin(), neighbours.end(), SortByDistanceTo{edge_point});
 
-				//add nearest reachable one
-				for (auto neighbour : neighbours) {
-					if(coverage_grid.AreDirectlyReachable(edge_point, neighbour)){
-						graph[edge_point].AddUnique(neighbour);
-						graph[neighbour].AddUnique(edge_point);
-						break;
+				for(auto edge_point: GetFirstEqualRange(points, direction)){
+
+					auto neighbours = coverage_grid.LocatedVisitPointsCache[{x, y}];
+
+					if(!neighbours.size())
+						continue;
+				
+					std::sort(neighbours.begin(), neighbours.end(), SortByDistanceTo{edge_point});
+
+					//add nearest reachable one
+					for (auto neighbour : neighbours) {
+						if(coverage_grid.AreDirectlyReachable(edge_point, neighbour)){
+							graph[edge_point].AddUnique(neighbour);
+							graph[neighbour].AddUnique(edge_point);
+							break;
+						}
 					}
 				}
-
 			}				
 		}
 	});

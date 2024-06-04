@@ -14,6 +14,8 @@ MapEditor::MapEditor(sf::Vector2i world_size):
 	m_Builders.push_back(std::make_unique<FirstNearWallPathBuilder>());
 	m_Builders.push_back(std::make_unique<DirectionSortPathBuilder>());
 	m_Builders.push_back(std::make_unique<RightFirstPathBuilder>());
+	//m_Builders.push_back(std::make_unique<RightFirstForWallsPathBuilder>());
+	m_Builders.push_back(std::make_unique<NonOccupiedPathBuilder>());
 
 	m_Current = m_Builders.size() - 1;
 }
@@ -126,6 +128,7 @@ void MapEditor::OnImGui() {
 		ImGui::Checkbox("DrawWallsCoveragePoints", &m_DrawWallsCoveragePoints);
 		ImGui::Checkbox("DrawCoverageGraph", &m_DrawCoverageGraph);
 		ImGui::Checkbox("DrawCoverageGraphDirections", &m_DrawCoverageGraphDirecions);
+		ImGui::Checkbox("DrawSimpleZoneDecomposition", &m_DrawSimpleZoneDecomposition);
 	}
 
 	ImGui::End();
@@ -147,7 +150,8 @@ void MapEditor::Render(sf::RenderTarget& rt) {
 		m_CoveragePathDebugging && m_DrawFullZoneDecomposition, 
 		m_CoveragePathDebugging && m_DrawCoveragePoints, 
 		m_CoveragePathDebugging && m_DrawCurrentCell,
-		m_CoveragePathDebugging && m_DrawWallsCoveragePoints
+		m_CoveragePathDebugging && m_DrawWallsCoveragePoints,
+		m_CoveragePathDebugging && m_DrawSimpleZoneDecomposition 
 	);
 
 	if(m_CoveragePathDebugging && m_DrawCoverageGraph)

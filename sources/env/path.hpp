@@ -43,3 +43,10 @@ struct RightFirstPathBuilder : PathBuilder {
 	std::string Name()const override{return "Right First"; }
 };
 
+struct NonOccupiedPathBuilder : PathBuilder {
+	std::vector<sf::Vector2i> MakePath(const Environment &env)const override;
+
+	std::vector<sf::Vector2i> MakePathForSimpleZone(const Environment &env, sf::IntRect simple_zone)const;
+
+	std::string Name()const override{return "NonOccupied"; }
+};

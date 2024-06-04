@@ -131,6 +131,39 @@ std::size_t Graph::CountReachableFrom(sf::Vector2i src) const{
     return count;
 }
 
+std::vector<sf::Vector2i> Graph::GetSortedNeighboursInDirection(sf::Vector2i vertex, sf::Vector2i direction) const{
+	std::vector<sf::Vector2i> neighbours = m_Vertices[vertex].Neighbours;
+
+	std::sort(neighbours.begin(), neighbours.end(), SortByDirection(direction));
+#if 0
+	auto count = neighbours.end() - std::remove(neighbours.begin(), neighbours.end(), [vertex, direction](sf::Vector2i point) { 
+		return SortByDirection::BeforeOrEqualPoint(point, vertex, direction);
+	});
+
+	neighbours.resize(neighbours.size() - count);
+#endif
+	verify(false);
+
+	return neighbours;
+}
+
+std::vector<sf::Vector2i> Graph::GetSortedNeighboursInDirection(sf::Vector2i vertex, sf::Vector2i direction, bool can_be_occupied) const{
+	auto neighbours = GetSortedNeighboursInDirection(vertex, direction);
+
+	if(can_be_occupied)
+		return neighbours;
+#if 0
+	auto count = neighbours.end() - std::remove(neighbours.begin(), neighbours.end(), [this](sf::Vector2i point) { 
+		return m_Vertices[point].HasAnyOccupied;
+	});
+
+	neighbours.resize(neighbours.size() - count);
+#endif
+	verify(false);
+
+	return neighbours;
+}
+
 Graph Graph::MakeFrom(const CoverageDecomposition& coverage_grid) {
 	std::unordered_map<sf::Vector2i, Neighbours> graph;
 
@@ -245,6 +278,19 @@ Graph Graph::MakeOptimizedFrom(const CoverageDecomposition& coverage_grid){
 	return {std::move(graph)};
 }
 
+Graph Graph::MakeWall(const Graph& graph){
+	std::unordered_map<sf::Vector2i, Neighbours> result;	
+#if 0
+	for (const auto& [v, n] : graph.m_Vertices) {
+		if(n.HasAnyOccupied){
+			
+			result[v]
+		}
+	}
+#endif
+	return {std::move(result)};
+}
+
 void Neighbours::AddUnique(sf::Vector2i neighbour){
 	if(std::find(Neighbours.begin(), Neighbours.end(), neighbour) == Neighbours.end())
 		Neighbours.push_back(neighbour);
@@ -268,9 +314,13 @@ void Neighbours::Remove(sf::Vector2i point){
 }
 
 bool SortByDirection::operator()(sf::Vector2i l, sf::Vector2i r) const{
-	auto sort_dir = sf::Vector2f(Direction).normalized();
+	return BeforePoint(l, r, Direction);
+}
 
-	return sf::Vector2f(l).dot(sort_dir) < sf::Vector2f(r).dot(sort_dir);
+bool SortByDirection::BeforePoint(sf::Vector2i first, sf::Vector2i second, sf::Vector2i direciton){
+	auto sort_dir = sf::Vector2f(direciton).normalized();
+
+	return sf::Vector2f(first).dot(sort_dir) < sf::Vector2f(second).dot(sort_dir);
 }
 
 bool SortByDistanceTo::operator()(sf::Vector2i l, sf::Vector2i r) const{

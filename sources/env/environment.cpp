@@ -94,7 +94,15 @@ static void DrawForCell(const CoverageDecomposition& builder, sf::RenderTarget& 
 	}
 }
 
-void Environment::DrawZones(sf::RenderTarget& rt, sf::Vector2i world_mouse_position, bool for_all_cells, bool zone, bool full_zone, bool points, bool cell_outline, bool walls) {
+void Environment::DrawZones(sf::RenderTarget& rt, sf::Vector2i world_mouse_position, bool for_all_cells, bool zone, bool full_zone, bool points, bool cell_outline, bool walls, bool simple) {
+
+	if(simple){
+		for(auto zone: Coverage.SimpleZoneDecompositionCache){
+			zone = Coverage.SimpleZoneToWorld(zone);
+
+			Render::DrawRect(rt, zone, sf::Color::Yellow * sf::Color(255, 255, 255, 40), 3, sf::Color::Yellow);
+		}
+	}
 
 	bool debug_line_trace = false;
 

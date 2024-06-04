@@ -8,6 +8,13 @@ struct SortByDirection {
 	sf::Vector2i Direction;
 
 	bool operator()(sf::Vector2i l, sf::Vector2i r)const;
+
+	static bool BeforePoint(sf::Vector2i first, sf::Vector2i second, sf::Vector2i direciton);
+
+	static bool BeforeOrEqualPoint(sf::Vector2i first, sf::Vector2i second, sf::Vector2i direciton) {
+		return BeforePoint(first, second, direciton)
+			|| (!BeforePoint(first, second, direciton) && !BeforePoint(second, first, direciton));
+	}
 };
 
 struct SortByDistanceTo {
@@ -69,7 +76,13 @@ public:
 		return m_Vertices.size();
 	}
 
+	std::vector<sf::Vector2i> GetSortedNeighboursInDirection(sf::Vector2i vertex, sf::Vector2i direction)const;
+
+	std::vector<sf::Vector2i> GetSortedNeighboursInDirection(sf::Vector2i vertex, sf::Vector2i direction, bool can_be_occupied)const;
+
 	static Graph MakeFrom(const CoverageDecomposition &coverage);
 
 	static Graph MakeOptimizedFrom(const CoverageDecomposition &coverage);
+
+	static Graph MakeWall(const Graph &graph);
 };

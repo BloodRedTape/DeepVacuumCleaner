@@ -47,7 +47,7 @@ struct Environment {
 #endif
 	}
 
-	void DrawZones(sf::RenderTarget &rt, sf::Vector2i mouse_position, bool for_all_cells, bool zone, bool full_zone, bool points, bool cell, bool walls);
+	void DrawZones(sf::RenderTarget &rt, sf::Vector2i mouse_position, bool for_all_cells, bool zone, bool full_zone, bool points, bool cell, bool walls, bool simple);
 
 	void SaveToFile(const std::string& filename);
 

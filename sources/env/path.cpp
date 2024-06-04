@@ -141,13 +141,10 @@ std::vector<sf::Vector2i> DirectionSortPathBuilder::MakePath(const Environment& 
 	std::vector<sf::Vector2i> path;
 	
 	auto start = env.LocalStartPosition();
-	path.push_back(start);
-
 	auto start_nearest = env.LocalNearestToStartPosition();
-
 	if(!start_nearest.has_value())	
 		return {};
-
+	path.push_back(start);
 	path.push_back(start_nearest.value());
 
 	auto TryGetPoint = [&](size_t last_index)->std::optional<sf::Vector2i>{
@@ -168,7 +165,7 @@ std::vector<sf::Vector2i> DirectionSortPathBuilder::MakePath(const Environment& 
 	};
 	
 	for (;;) {
-		auto next = TryGetPointWithBackPropagation(env, path, TryGetPoint, false);
+		auto next = TryGetPointWithBackPropagation(env, path, TryGetPoint, true, false);
 
 		//if(!next.has_value())
 		if(!next.size())
@@ -259,3 +256,84 @@ std::vector<sf::Vector2i> RightFirstPathBuilder::MakePath(const Environment& env
 	return path;
 }
 
+sf::Vector2i Right(sf::Vector2i dir) {
+	return {dir.y, -dir.x};
+}
+
+sf::Vector2i Left(sf::Vector2i dir) {
+	return {-dir.y, dir.x};
+}
+
+sf::Vector2i Dir(sf::Vector2i dir, int lr) {
+	if(lr > 0)
+		return Right(dir);
+	if(lr < 0)
+		return Left(dir);
+	return dir;
+}
+
+std::vector<sf::Vector2i> NonOccupiedPathBuilder::MakePath(const Environment& env) const{
+	const auto &graph = env.CoverageGraph;
+
+	std::vector<sf::Vector2i> path;
+
+	auto start = env.LocalStartPosition();
+	auto start_nearest = env.LocalNearestToStartPosition();
+
+	if(!start_nearest.has_value())	
+		return {};
+
+	path.push_back(start);
+	path.push_back(start_nearest.value());
+
+	auto zones = env.Coverage.SimpleZoneDecompositionCache;
+	
+	for (auto zone : zones) {
+		
+		auto zone_path = MakePathForSimpleZone(env, zone);
+		
+		std::transform(zone_path.begin(), zone_path.end(), zone_path.begin(), [&env](sf::Vector2i coverage) {
+			const auto &points = env.Coverage.LocatedVisitPointsCache[coverage];
+
+			if(!points.size())
+				return sf::Vector2i(0, 0);
+
+			return points.front();
+		});
+
+		auto path_to_zone = env.CoverageGraph.ShortestPath(path.back(), zone_path.front());
+
+		if(path_to_zone.size()){
+			std::copy(path_to_zone.begin(), path_to_zone.end(), std::back_inserter(path));
+			std::copy(zone_path.begin(), zone_path.end(), std::back_inserter(path));
+		}
+	}
+
+
+	return path;
+}
+
+std::vector<sf::Vector2i> NonOccupiedPathBuilder::MakePathForSimpleZone(const Environment& env, sf::IntRect simple_zone) const{
+    std::vector<sf::Vector2i> result;
+
+    // Determine the dimensions of the zone
+    int width = simple_zone.width;
+    int height = simple_zone.height;
+
+    // Iterate through the zone in a zigzag manner
+    for (int y = 0; y < height; ++y) {
+        if (y % 2 == 0) {
+            // Left to right for even indexed rows
+            for (int x = 0; x < width; ++x) {
+                result.emplace_back(simple_zone.left + x, simple_zone.top + y);
+            }
+        } else {
+            // Right to left for odd indexed rows
+            for (int x = width - 1; x >= 0; --x) {
+                result.emplace_back(simple_zone.left + x, simple_zone.top + y);
+            }
+        }
+    }
+
+    return result;
+}

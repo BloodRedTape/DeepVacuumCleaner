@@ -24,6 +24,7 @@ struct CoverageDecomposition {
 	mutable std::unordered_map<sf::Vector2i, std::vector<sf::Vector2i>> LocatedVisitPointsCache;
 	mutable std::unordered_map<sf::Vector2i, std::vector<sf::IntRect>> ZoneDecompositionCache;
 	mutable std::unordered_map<sf::Vector2i, std::vector<sf::IntRect>> CoverageZoneDecompositionCache;
+	std::vector<sf::IntRect> SimpleZoneDecompositionCache;
 
 	CoverageDecomposition(GridDecomposition &grid, std::size_t coverage_size = 3);
 
@@ -67,6 +68,18 @@ struct CoverageDecomposition {
 	std::optional<sf::Vector2i> LocalNearestVisitPointTo(sf::Vector2i local_point)const;
 
 	bool HasAnyOccupied(sf::Vector2i coverage)const;
+
+	bool IsComplex(sf::Vector2i coverage)const;
+
+	bool IsSimple(sf::Vector2i coverage)const{return !IsComplex(coverage); }
+
+	bool TryExtendWhileSimple(sf::IntRect& rect, int direction, int axis, const std::vector<sf::IntRect> &existing)const;
+
+	sf::IntRect ExtendSimple(sf::IntRect rect, const std::vector<sf::IntRect> &existing)const;
+
+	std::vector<sf::IntRect> MakeSimpleZoneDecomposition()const;
+
+	sf::IntRect SimpleZoneToWorld(sf::IntRect zone)const;
 
 	std::vector<sf::Vector2i> GatherCoverageVisitPointsInRadius(sf::Vector2i coverage_cell, sf::Vector2i dims = {1, 1})const;
 

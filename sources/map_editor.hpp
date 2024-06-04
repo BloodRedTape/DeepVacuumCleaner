@@ -37,8 +37,9 @@ private:
 	bool m_DrawFullZoneDecomposition = false;
 	bool m_DrawCoveragePoints = false;
 	bool m_DrawWallsCoveragePoints = false;
-	bool m_DrawCoverageGraph = true;
+	bool m_DrawCoverageGraph = false;
 	bool m_DrawCoverageGraphDirecions = false;
+	bool m_DrawSimpleZoneDecomposition = false;
 
 	std::vector<std::unique_ptr<PathBuilder>> m_Builders;
 	std::size_t m_Current = 0;

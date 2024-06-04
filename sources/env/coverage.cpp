@@ -30,6 +30,7 @@ void CoverageDecomposition::Rebuild() {
 	});
 
 	WallVisitPoints = GatherWallsCoverageVisitPoints();
+	SimpleZoneDecompositionCache = MakeSimpleZoneDecomposition();
 }
 
 sf::Vector2i CoverageDecomposition::GridToCoverageCell(sf::Vector2i grid_index)const{
@@ -214,6 +215,79 @@ bool CoverageDecomposition::HasAnyOccupied(sf::Vector2i coverage)const {
 			return true;
 	}
 	return false;
+}
+
+bool CoverageDecomposition::IsComplex(sf::Vector2i coverage) const{
+	return LocatedVisitPointsCache[coverage].size() > 1 || HasAnyOccupied(coverage);
+}
+
+bool IsInAny(const std::vector<sf::IntRect>& rects, sf::Vector2i point) {
+	for(auto rect: rects)
+		if(rect.contains(point))
+			return true;
+
+	return false;
+}
+
+bool OverlapsAny(const std::vector<sf::IntRect>& rects, sf::IntRect rect) {
+	for(auto other: rects)
+		if(rect.findIntersection(other).has_value())
+			return true;
+
+	return false;
+}
+
+bool CoverageDecomposition::TryExtendWhileSimple(sf::IntRect& rect, int direction, int axis, const std::vector<sf::IntRect> &existing) const{
+	sf::IntRect new_rect = Extend(rect, direction, axis);
+
+	if(!IsInBounds(new_rect.getPosition()))
+		return false;
+
+	if(!IsInBounds(new_rect.getPosition() + new_rect.getSize() - sf::Vector2i(1, 1)))
+		return false;
+
+	if(OverlapsAny(existing, new_rect))
+		return false;
+	
+	for(int x = 0; x<new_rect.getSize().x; x++){
+		for(int y = 0; y<new_rect.getSize().y; y++){
+			if(!IsSimple(new_rect.getPosition() + sf::Vector2i(x, y)))
+				return false;
+		}
+	}
+	
+	rect = new_rect;
+	return true;
+}
+
+sf::IntRect CoverageDecomposition::ExtendSimple(sf::IntRect rect, const std::vector<sf::IntRect> &existing) const{
+	while(TryExtendWhileSimple(rect, 1, 0, existing));
+	while(TryExtendWhileSimple(rect,-1, 0, existing));
+	while(TryExtendWhileSimple(rect, 1, 1, existing));
+	while(TryExtendWhileSimple(rect,-1, 1, existing));
+
+	return rect;
+}
+
+std::vector<sf::IntRect> CoverageDecomposition::MakeSimpleZoneDecomposition() const{
+	std::vector<sf::IntRect> result;
+
+	ForEachCoverage([&](sf::Vector2i coverage) {
+		if(IsInAny(result, coverage))
+			return;
+		
+		if(!IsSimple(coverage))
+			return;
+
+		result.push_back(ExtendSimple({coverage, {1, 1}}, result));
+	});
+
+	return result;
+}
+
+sf::IntRect CoverageDecomposition::SimpleZoneToWorld(sf::IntRect zone) const{
+	int CoverageToLocal = int(CoverageSize) * int(Grid.CellSize);
+	return {zone.getPosition() * CoverageToLocal + Grid.Bounds.getPosition(), zone.getSize() * CoverageToLocal};
 }
 
 std::vector<sf::Vector2i> CoverageDecomposition::GatherCoverageVisitPointsInRadius(sf::Vector2i coverage_cell, sf::Vector2i dims)const {

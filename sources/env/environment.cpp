@@ -54,6 +54,17 @@ void Environment::Draw(sf::RenderTarget& rt, std::size_t path_drawing_mode) {
 		}
 	}
 
+	if (path_drawing_mode == PathWithColorLines && Path.size()) {
+		for (int i = 0; i<Path.size() - 1; i++) {
+			auto start = Path[i];
+			auto end = Path[i + 1];
+
+			auto color = Render::GetRainbowColor(i, Path.size());
+			Render::DrawLine(rt, start, end, 3.f, color);
+		}
+	}
+
+
 	for (const auto &wall : Walls)
 		Render::DrawLine(rt, wall.Start, wall.End, RenderWallHeight);
 }

@@ -46,6 +46,8 @@ public:
 		return m_Vertices[point];
 	}
 
+	void MakeConnection(sf::Vector2i src, sf::Vector2i dst, bool is_oriented = true);
+
 	bool IsReachable(sf::Vector2i source, sf::Vector2i dst)const;
 
 	void Draw(sf::RenderTarget &rt, sf::Vector2i offset = {0, 0}, bool draw_directions = false)const;

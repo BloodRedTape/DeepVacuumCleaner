@@ -24,7 +24,7 @@ private:
 
 	std::string m_MapFilename;
 
-	std::size_t m_PathDrawingMode = 2;
+	std::size_t m_PathDrawingMode = 3;
 
 	int m_SnapGrid = 20;
 
@@ -37,7 +37,7 @@ private:
 	bool m_DrawFullZoneDecomposition = false;
 	bool m_DrawCoveragePoints = false;
 	bool m_DrawWallsCoveragePoints = false;
-	bool m_DrawCoverageGraph = true;
+	bool m_DrawCoverageGraph = false;
 	bool m_DrawCoverageGraphDirecions = false;
 
 	std::vector<std::unique_ptr<PathBuilder>> m_Builders;

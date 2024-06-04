@@ -12,6 +12,9 @@ MapEditor::MapEditor(sf::Vector2i world_size):
 	m_Builders.push_back(std::make_unique<BreadthSearchPathFinder>());
 	m_Builders.push_back(std::make_unique<BreadthSearchWithSortPathFinder>());
 	m_Builders.push_back(std::make_unique<FirstNearWallPathBuilder>());
+	m_Builders.push_back(std::make_unique<DirectionSortPathBuilder>());
+
+	m_Current = m_Builders.size() - 1;
 }
 
 void MapEditor::Tick(float dt) {
@@ -78,7 +81,7 @@ void MapEditor::OnImGui() {
 	}
 	ImGui::Separator();
 
-	ImGui::SimpleCombo("Path Drawing mode", &m_PathDrawingMode, {"None", "Points", "Line"});
+	ImGui::SimpleCombo("Path Drawing mode", &m_PathDrawingMode, {"None", "Points", "Line", "ColorLine"});
 	ImGui::Checkbox("Draw Bounds", &m_DrawBounds);
 	ImGui::Checkbox("Draw Grid Decomposition", &m_DrawGridDecomposition);
 	ImGui::InputInt("Grid Cell Size", &m_GridCellSize);

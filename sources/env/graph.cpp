@@ -1,6 +1,13 @@
 #include "graph.hpp"
 #include "utils/render.hpp"
 
+void Graph::MakeConnection(sf::Vector2i src, sf::Vector2i dst, bool is_oriented){
+	m_Vertices[src].AddUnique(dst);
+
+	if(!is_oriented)
+		m_Vertices[dst].AddUnique(src);
+}
+
 bool Graph::IsReachable(sf::Vector2i source, sf::Vector2i dst) const{
 	std::vector<sf::Vector2i> path;
 	
@@ -116,6 +123,7 @@ Graph Graph::MakeOptimizedFrom(const CoverageDecomposition& coverage_grid){
 				for (auto neighbour : neighbours) {
 					if(coverage_grid.AreDirectlyReachable(edge_point, neighbour)){
 						graph[edge_point].AddUnique(neighbour);
+						graph[neighbour].AddUnique(edge_point);
 						break;
 					}
 				}

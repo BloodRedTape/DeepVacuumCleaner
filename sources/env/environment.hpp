@@ -27,6 +27,7 @@ struct Environment {
 	static constexpr int NoPath = 0;
 	static constexpr int PathWithPoints = 1;
 	static constexpr int PathWithLines = 2;
+	static constexpr int PathWithColorLines = 3;
 
 	bool IsFullfiled()const;
 
@@ -47,6 +48,14 @@ struct Environment {
 	void Bake(std::size_t cell_size, sf::Vector2i start_position, bool optimized_graph);
 
 	sf::IntRect GatherBounds()const;
+
+	sf::Vector2i LocalStartPosition()const {
+		return StartPosition - Grid.Bounds.getPosition();
+	}
+
+	std::optional<sf::Vector2i> LocalNearestToStartPosition()const {
+		return Coverage.LocalNearestVisitPointTo(LocalStartPosition());
+	}
 
 	void Clear() {
 		Walls.clear();

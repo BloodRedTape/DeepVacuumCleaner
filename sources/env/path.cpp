@@ -38,9 +38,12 @@ inline std::vector<sf::Vector2i> PathBuilder::TryGetPointWithBackPropagation(con
 	return {};
 }
 
-std::optional<sf::Vector2i> PathBuilder::FindFirstUnvisited(const Environment& env, const std::vector<sf::Vector2i>& candidates, const std::vector<sf::Vector2i>& path)const {
+std::optional<sf::Vector2i> PathBuilder::FindFirstUnvisited(const Environment& env, const std::vector<sf::Vector2i>& candidates, const std::vector<sf::Vector2i>& path, const std::optional<sf::Vector2i> except)const {
 	for (auto next : candidates) {
 		if (std::find(path.begin(), path.end(), next) == path.end()) {
+			if(except.has_value() && except.value() == next)
+				continue;
+
 			return std::make_optional(next);
 		}
 	}
@@ -193,12 +196,9 @@ std::vector<sf::Vector2i> RightFirstPathBuilder::MakePath(const Environment& env
 	path.push_back(start);
 	path.push_back(start_nearest.value());
 
-	auto TryGetPoint = [&](std::size_t end)->std::optional<sf::Vector2i>{
-		if(end == 0)
-			return std::nullopt;
 
-		auto point = path[end];
-		auto direction = point - path[end - 1];
+	auto FindFirstUnvisitedByAngle = [&](sf::Vector2i point, sf::Vector2i prev, std::optional<sf::Vector2i> except = {})->std::optional<sf::Vector2i> {
+		auto direction = point - prev;
 
 		sf::Vector2i right(sf::Vector2f(direction).rotatedBy(sf::degrees(-90)));
 
@@ -209,7 +209,42 @@ std::vector<sf::Vector2i> RightFirstPathBuilder::MakePath(const Environment& env
 
 		std::sort(neighbours.begin(), neighbours.end(), SortByAngleCouterClockwize{ right, point });
 
-		return FindFirstUnvisited(env, neighbours, path);
+		return FindFirstUnvisited(env, neighbours, path, except);
+	};
+
+	auto FindFirstUnvisitedByDistance = [&](sf::Vector2i point, sf::Vector2i prev, std::optional<sf::Vector2i> except = {})->std::optional<sf::Vector2i> {
+		auto direction = point - prev;
+
+		std::vector<sf::Vector2i> neighbours = graph[point].Neighbours;
+
+		if (!verify(neighbours.size()))
+			return std::nullopt;
+
+		std::sort(neighbours.begin(), neighbours.end(), SortByDistanceTo{ point });
+
+		return FindFirstUnvisited(env, neighbours, path, except);
+	};
+
+	auto TryGetPoint = [&](std::size_t end)->std::optional<sf::Vector2i>{
+		if(end == 0)
+			return std::nullopt;
+
+		auto point = path[end];
+		auto prev = path[end - 1];
+
+		auto by_angle = FindFirstUnvisitedByAngle(point, prev);
+#ifdef MAKE_SMALL_OPTIMIZE_BY_DISTANCE
+		auto by_distance = FindFirstUnvisitedByDistance(point, prev);
+
+		if (by_distance.has_value()) {
+			auto next_by_angle = FindFirstUnvisitedByAngle(by_distance.value(), point, point);
+			auto next_by_distance = FindFirstUnvisitedByDistance(by_distance.value(), point, point);
+
+			if(next_by_angle == next_by_distance && next_by_angle == by_angle)
+				return by_distance;
+		}
+#endif
+		return by_angle;
 	};
 
 	for (;;) {
@@ -223,3 +258,4 @@ std::vector<sf::Vector2i> RightFirstPathBuilder::MakePath(const Environment& env
 
 	return path;
 }
+

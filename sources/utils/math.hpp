@@ -139,7 +139,7 @@ namespace Math{
 	}
 
 	inline float AngleCouterClockwize(const sf::Vector2f& v1, const sf::Vector2f& v2) {
-		int angle = v1.angleTo(v2).asDegrees();
+		int angle = v1.normalized().angleTo(v2.normalized()).asDegrees();
 
 		if(angle < 0)
 			angle += 360;

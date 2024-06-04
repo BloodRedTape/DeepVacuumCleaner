@@ -21,7 +21,7 @@ bool Graph::IsReachable(sf::Vector2i source, sf::Vector2i dst) const{
 	return false;
 }
 
-void Graph::Draw(sf::RenderTarget& rt, sf::Vector2i offset)const {
+void Graph::Draw(sf::RenderTarget& rt, sf::Vector2i offset, bool draw_directions)const {
 	auto point_radius = 5.f;
 
 	for (const auto& [vertex, neighbours] : m_Vertices) {
@@ -30,7 +30,8 @@ void Graph::Draw(sf::RenderTarget& rt, sf::Vector2i offset)const {
 			auto dst = neighbour + offset;
 			auto dir = sf::Vector2f(dst - src).normalized();
 			Render::DrawLine(rt, src, dst, 2.f, sf::Color::White);
-			//Render::DrawCircle(rt, dst - sf::Vector2i(dir * point_radius * 2.f), point_radius, sf::Color::Red);
+			if(draw_directions)
+				Render::DrawCircle(rt, dst - sf::Vector2i(dir * point_radius * 2.f), point_radius, sf::Color::Red);
 		}
 	}
 

@@ -36,7 +36,7 @@ public:
 
 	bool IsReachable(sf::Vector2i source, sf::Vector2i dst)const;
 
-	void Draw(sf::RenderTarget &rt, sf::Vector2i offset = {0, 0})const;
+	void Draw(sf::RenderTarget &rt, sf::Vector2i offset = {0, 0}, bool draw_directions = false)const;
 
 
 	static Graph MakeFrom(const CoverageDecomposition &coverage);

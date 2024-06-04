@@ -83,8 +83,10 @@ void MapEditor::OnImGui() {
 	ImGui::Checkbox("Draw Grid Decomposition", &m_DrawGridDecomposition);
 	ImGui::InputInt("Grid Cell Size", &m_GridCellSize);
 	
+	ImGui::Spacing();
+	ImGui::Checkbox("Optimized Graph", &m_OptimizedGraph);
 	if (ImGui::Button("Bake"))
-		m_Env.AutogeneratePath(m_GridCellSize, m_StartPosition, false);
+		m_Env.Bake(m_GridCellSize, m_StartPosition, m_OptimizedGraph);
 	
 	std::vector<std::string> names;
 	for(const auto &builder: m_Builders)
@@ -110,6 +112,7 @@ void MapEditor::OnImGui() {
 		ImGui::Checkbox("DrawCoveragePoints", &m_DrawCoveragePoints);
 		ImGui::Checkbox("DrawWallsCoveragePoints", &m_DrawWallsCoveragePoints);
 		ImGui::Checkbox("DrawCoverageGraph", &m_DrawCoverageGraph);
+		ImGui::Checkbox("DrawCoverageGraphDirections", &m_DrawCoverageGraphDirecions);
 	}
 
 	ImGui::End();
@@ -135,7 +138,7 @@ void MapEditor::Render(sf::RenderTarget& rt) {
 	);
 
 	if(m_CoveragePathDebugging && m_DrawCoverageGraph)
-		m_Env.DrawGraph(rt);
+		m_Env.DrawGraph(rt, m_DrawCoverageGraphDirecions);
 	m_Env.Draw(rt, m_PathDrawingMode);
 
 

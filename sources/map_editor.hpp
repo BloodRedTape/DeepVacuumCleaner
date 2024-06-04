@@ -28,7 +28,7 @@ private:
 
 	int m_SnapGrid = 20;
 
-	bool m_BuildPath = false;
+	bool m_OptimizedGraph = true;
 
 	bool m_CoveragePathDebugging = true;
 	bool m_ForAllCells = true;
@@ -38,6 +38,7 @@ private:
 	bool m_DrawCoveragePoints = false;
 	bool m_DrawWallsCoveragePoints = false;
 	bool m_DrawCoverageGraph = true;
+	bool m_DrawCoverageGraphDirecions = false;
 
 	std::vector<std::unique_ptr<PathBuilder>> m_Builders;
 	std::size_t m_Current = 0;

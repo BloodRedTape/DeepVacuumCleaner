@@ -34,8 +34,8 @@ struct Environment {
 
 	void Draw(sf::RenderTarget& rt, std::size_t path_drawing_mode = 0);
 
-	void DrawGraph(sf::RenderTarget& rt)const {
-		CoverageGraph.Draw(rt, Grid.Bounds.getPosition());
+	void DrawGraph(sf::RenderTarget& rt, bool with_directions)const {
+		CoverageGraph.Draw(rt, Grid.Bounds.getPosition(), with_directions);
 	}
 
 	void DrawZones(sf::RenderTarget &rt, sf::Vector2i mouse_position, bool for_all_cells, bool zone, bool full_zone, bool points, bool cell, bool walls);
@@ -44,7 +44,7 @@ struct Environment {
 
 	void LoadFromFile(const std::string& filename);
 
-	void AutogeneratePath(std::size_t cell_size, sf::Vector2i start_position, bool build_path);
+	void Bake(std::size_t cell_size, sf::Vector2i start_position, bool optimized_graph);
 
 	sf::IntRect GatherBounds()const;
 

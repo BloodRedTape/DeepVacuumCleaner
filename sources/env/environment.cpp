@@ -162,7 +162,7 @@ void Environment::LoadFromFile(const std::string& filename) {
 	Walls = std::move(walls.value());
 }
 
-void Environment::AutogeneratePath(std::size_t cell_size, sf::Vector2i start_position, bool build_path) {
+void Environment::Bake(std::size_t cell_size, sf::Vector2i start_position, bool optimized_graph) {
 	LogEnvIf(Path.size(), Warning, "Path is already generated, overwriting");
 	Path.clear();
 	StartPosition = start_position;
@@ -176,14 +176,13 @@ void Environment::AutogeneratePath(std::size_t cell_size, sf::Vector2i start_pos
 
 	Coverage.Rebuild();
 	LogEnv(Info, "Coverage Decomposition took % seconds", cl.restart().asSeconds());
-
-	CoverageGraph = Graph::MakeOptimizedFrom(Coverage);
-	LogEnv(Info, "Graph took % seconds", cl.restart().asSeconds());
 	
-	if(build_path){
-		Path = Coverage.BuildPath(start_position);
-		LogEnv(Info, "Path building took % seconds", cl.restart().asSeconds());
-	}
+	if(optimized_graph)
+		CoverageGraph = Graph::MakeOptimizedFrom(Coverage);
+	else
+		CoverageGraph = Graph::MakeFrom(Coverage);
+
+	LogEnv(Info, "Graph took % seconds", cl.restart().asSeconds());
 }
 
 sf::Vector2i Min(sf::Vector2i first, sf::Vector2i second) {

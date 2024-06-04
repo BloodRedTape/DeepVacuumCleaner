@@ -74,44 +74,61 @@ Graph Graph::MakeOptimizedFrom(const CoverageDecomposition& coverage_grid){
 		auto points = coverage_grid.LocatedVisitPointsCache[coverage];
 		//auto neighbours = coverage_grid.GatherNeighboursVisitPoints(coverage);
 
+		if(!points.size())
+			return;
+
 		for (auto point : points) {
 			graph[point].HasAnyOccupied = coverage_grid.HasAnyOccupied(coverage);
-			
+#define INTERCONNECT
+#ifdef INTERCONNECT
 			//XXX Do this only all points inside AreDirectlyReachable
 			graph[point].AppendUnique(points);
 			graph[point].Remove(point);
-			
-			if(points.size() != 1)
-				continue;
+#endif
+		}
 
-			auto SortByDistanceToPoint = [point](sf::Vector2i l, sf::Vector2i r) {
-				return sf::Vector2f(l - point).length() < sf::Vector2f(r - point).length();
-			};
+		auto start = coverage - sf::Vector2i(1, 1);
+		auto end = coverage + sf::Vector2i(1, 1);
 
-			auto start = coverage - sf::Vector2i(1, 1);
-			auto end = coverage + sf::Vector2i(1, 1);
+		for (int x = start.x; x <= end.x; x++) {
+			for (int y = start.y; y <= end.y; y++) {
+				if(x == coverage.x && y == coverage.y)
+					continue;
 
-			for (int x = start.x; x <= end.x; x++) {
-				for (int y = start.y; y <= end.y; y++) {
-					if(x == coverage.x && y == coverage.y)
-						continue;
+				sf::Vector2i direction = sf::Vector2i(x, y) - coverage;
 
-					auto neighbours = coverage_grid.LocatedVisitPointsCache[{x, y}];
+				auto SortByDirection = [direction](sf::Vector2i l, sf::Vector2i r) {
+					auto lr = sf::Vector2f(r - l).normalized();
 
-					if(!neighbours.size())
-						continue;
-					
-					std::sort(neighbours.begin(), neighbours.end(), SortByDistanceToPoint);
-					//add nearest reachable one
-					for (auto neighbour : neighbours) {
-						if(coverage_grid.AreDirectlyReachable(point, neighbour)){
-							graph[point].AddUnique(neighbours.front());
-							break;
-						}
+					auto sort_dir = sf::Vector2f(direction).normalized();
+
+					return lr.dot(sort_dir) >= 0;
+				};
+
+				std::sort(points.begin(), points.end(), SortByDirection);
+
+				auto edge_point = points.back();
+
+				auto SortByDistanceToEdgePoint = [edge_point](sf::Vector2i l, sf::Vector2i r) {
+					return sf::Vector2f(l - edge_point).length() < sf::Vector2f(r - edge_point).length();
+				};
+
+				auto neighbours = coverage_grid.LocatedVisitPointsCache[{x, y}];
+
+				if(!neighbours.size())
+					continue;
+				
+				std::sort(neighbours.begin(), neighbours.end(), SortByDistanceToEdgePoint);
+
+				//add nearest reachable one
+				for (auto neighbour : neighbours) {
+					if(coverage_grid.AreDirectlyReachable(edge_point, neighbour)){
+						graph[edge_point].AddUnique(neighbour);
+						break;
 					}
+				}
 
-				}				
-			}
+			}				
 		}
 	});
 

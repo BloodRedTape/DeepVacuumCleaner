@@ -59,6 +59,15 @@ void MapEditor::OnImGui() {
 
 	ImGui::Text("Walls: %d", m_Env.Walls.size());
 	ImGui::Text("Points: %d", m_Env.Path.size());
+	ImGui::Text("GraphVertices: %d", m_Env.CoverageGraph.Size());
+	if(m_Env.Grid.Bounds.getSize().x){
+		auto nearest = m_Env.LocalNearestToStartPosition();
+		if(nearest.has_value()){
+			int reachable = m_Env.CoverageGraph.CountReachableFrom(nearest.value());
+			ImGui::Text("GraphReachableFromStart: %d", reachable);
+			ImGui::Text("Map Efficiency: %.1f%%", (reachable / float(m_Env.Path.size())) * 100);
+		}
+	}
 
 	if(ImGui::Button("Clear"))
 		m_Env.Clear();

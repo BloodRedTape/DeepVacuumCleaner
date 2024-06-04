@@ -1,6 +1,8 @@
 #include "graph.hpp"
 #include "utils/render.hpp"
 #include "utils/math.hpp"
+#include <queue>
+#include <unordered_set>
 
 void Graph::MakeConnection(sf::Vector2i src, sf::Vector2i dst, bool is_oriented){
 	m_Vertices[src].AddUnique(dst);
@@ -50,6 +52,83 @@ void Graph::DrawVertex(sf::RenderTarget& rt, sf::Vector2i vertex, sf::Vector2i o
 	}
 
 	Render::DrawCircle(rt, vertex + offset, RenderPointRadius, sf::Color::Green);
+}
+
+//we don't include Src point
+std::vector<sf::Vector2i> Graph::ShortestPath(sf::Vector2i src, sf::Vector2i dst) const {
+	auto Heuristic = [](const sf::Vector2i& a, const sf::Vector2i& b)->int {
+		return std::abs(a.x - b.x) + std::abs(a.y - b.y);
+	};
+
+    std::unordered_map<sf::Vector2i, sf::Vector2i, std::hash<sf::Vector2i>> came_from;     // To reconstruct the path
+    std::unordered_map<sf::Vector2i, int, std::hash<sf::Vector2i>> cost_so_far;            // Cost from src to n
+
+    auto compare = [](const std::pair<sf::Vector2i, int>& a, const std::pair<sf::Vector2i, int>& b){
+        return a.second > b.second;
+    };
+    std::priority_queue<std::pair<sf::Vector2i, int>, std::vector<std::pair<sf::Vector2i, int>>, decltype(compare)> frontier(compare);
+
+    frontier.emplace(src, 0);
+    came_from[src] = src;
+    cost_so_far[src] = 0;
+
+    while (!frontier.empty()) {
+        sf::Vector2i current = frontier.top().first;
+        frontier.pop();
+
+        if (current == dst) {
+            break;
+        }
+
+        const auto& neighbors = m_Vertices[current].Neighbours;
+        for (const auto& next : neighbors) {
+            int new_cost = cost_so_far[current] + 1; // Assuming the graph is unweighted (cost=1 for each move)
+            if (cost_so_far.find(next) == cost_so_far.end() || new_cost < cost_so_far[next]) {
+                cost_so_far[next] = new_cost;
+                int priority = new_cost + Heuristic(next, dst);
+                frontier.emplace(next, priority);
+                came_from[next] = current;
+            }
+        }
+    }
+
+    std::vector<sf::Vector2i> path;
+    if (came_from.find(dst) == came_from.end()) {
+        return path; // No path found
+    }
+
+    for (sf::Vector2i current = dst; current != src; current = came_from[current]) {
+        path.push_back(current);
+    }
+    path.push_back(src);
+    std::reverse(path.begin(), path.end());
+    return path;
+}
+
+std::size_t Graph::CountReachableFrom(sf::Vector2i src) const{
+    std::queue<sf::Vector2i> frontier;
+    std::unordered_set<sf::Vector2i, std::hash<sf::Vector2i>> visited;
+
+    frontier.push(src);
+    visited.insert(src);
+
+    std::size_t count = 0;
+
+    while (!frontier.empty()) {
+        sf::Vector2i current = frontier.front();
+        frontier.pop();
+        count++;
+
+        const auto& neighbors = m_Vertices.at(current).Neighbours;
+        for (const auto& next : neighbors) {
+            if (visited.find(next) == visited.end()) {
+                frontier.push(next);
+                visited.insert(next);
+            }
+        }
+    }
+
+    return count;
 }
 
 Graph Graph::MakeFrom(const CoverageDecomposition& coverage_grid) {

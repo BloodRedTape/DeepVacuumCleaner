@@ -292,11 +292,11 @@ std::vector<sf::Vector2i> CoverageDecomposition::TraceLine(sf::Vector2i local_sr
 }
 
 bool CoverageDecomposition::AreDirectlyReachable(sf::Vector2i local_src, sf::Vector2i local_dst)const {
+#if 0
 	auto length_vec = sf::Vector2f(local_dst - local_src);
 	int length = length_vec.length();
 	if(length <= Grid.CellSize * 2)
 		return true;
-#if 0
 	if(local_src.x == local_dst.x && length_vec.y <= Grid.CellSize * CoverageSize)
 		return true;
 	if(local_src.y == local_dst.y && length_vec.x <= Grid.CellSize * CoverageSize)

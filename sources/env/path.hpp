@@ -8,6 +8,9 @@ struct PathBuilder{
 	virtual std::string Name()const = 0;
 
 	std::optional<sf::Vector2i> FindFirstUnvisited(const Environment &env, const std::vector<sf::Vector2i> &candidates, const std::vector<sf::Vector2i> &path)const;
+	
+	template<typename TryGetNextPointType>
+	std::vector<sf::Vector2i> TryGetPointWithBackPropagation(const Environment &env, const std::vector<sf::Vector2i> &path, TryGetNextPointType TryGetNextPoint, bool include_back_path = true, bool optimize_back_path = false)const;
 };
 
 struct BreadthSearchPathFinder: PathBuilder{
@@ -39,3 +42,4 @@ struct RightFirstPathBuilder : PathBuilder {
 
 	std::string Name()const override{return "Right First"; }
 };
+

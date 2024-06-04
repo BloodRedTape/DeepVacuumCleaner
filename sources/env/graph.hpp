@@ -60,7 +60,14 @@ public:
 	void Draw(sf::RenderTarget &rt, sf::Vector2i offset = {0, 0}, bool draw_directions = false)const;
 
 	void DrawVertex(sf::RenderTarget &rt, sf::Vector2i vertex, sf::Vector2i offset = {0, 0}, bool draw_directions = false)const;
+	
+	std::vector<sf::Vector2i> ShortestPath(sf::Vector2i src, sf::Vector2i dst)const;
 
+	std::size_t CountReachableFrom(sf::Vector2i src)const;
+
+	std::size_t Size()const {
+		return m_Vertices.size();
+	}
 
 	static Graph MakeFrom(const CoverageDecomposition &coverage);
 

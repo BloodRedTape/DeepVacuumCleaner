@@ -3,6 +3,40 @@
 #include "bsl/assert.hpp"
 #include "bsl/log.hpp"
 
+template<typename TryGetNextPointType>
+inline std::vector<sf::Vector2i> PathBuilder::TryGetPointWithBackPropagation(const Environment &env, const std::vector<sf::Vector2i>& path, TryGetNextPointType TryGetNextPoint, bool include_back_path, bool optimize_back_path) const
+{
+	int LastIndex = path.size() - 1;
+		
+	for (int i = LastIndex; i >= 1; --i) {
+		auto point = TryGetNextPoint(i);
+
+		if (point.has_value()) {
+			std::vector<sf::Vector2i> chunk;
+			
+			if(include_back_path){
+				const int BackPathStart = LastIndex - 1;
+
+				if (!optimize_back_path) {
+					const int BackPathEnd = i;
+					for(int back = BackPathStart; back >= BackPathEnd; --back)
+						chunk.push_back(path[back]);
+					chunk.push_back(point.value());
+				} else {
+					if(i != LastIndex) {
+						chunk = env.CoverageGraph.ShortestPath(path[BackPathStart], point.value());
+						verify(chunk.size());
+					} else {
+						chunk.push_back(point.value());
+					}
+				}
+			}
+
+			return chunk;
+		}
+	}
+	return {};
+}
 
 std::optional<sf::Vector2i> PathBuilder::FindFirstUnvisited(const Environment& env, const std::vector<sf::Vector2i>& candidates, const std::vector<sf::Vector2i>& path)const {
 	for (auto next : candidates) {
@@ -99,8 +133,6 @@ std::vector<sf::Vector2i> FirstNearWallPathBuilder::MakePath(const Environment& 
 
 std::vector<sf::Vector2i> DirectionSortPathBuilder::MakePath(const Environment& env) const{
 
-	constexpr bool BackPropagate = false;
-	
 	const auto &graph = env.CoverageGraph;
 
 	std::vector<sf::Vector2i> path;
@@ -131,30 +163,9 @@ std::vector<sf::Vector2i> DirectionSortPathBuilder::MakePath(const Environment& 
 
 		return FindFirstUnvisited(env, neighbours, path);
 	};
-
-	auto TryGetPointPropagate = [&]()->std::vector<sf::Vector2i>{
-		int LastIndex = path.size() - 1;
-		
-		for (int i = LastIndex; i >= 1; --i) {
-			auto point = TryGetPoint(i);
-
-			if (point.has_value()) {
-				std::vector<sf::Vector2i> chunk;
-				
-				if(BackPropagate){
-					for(int back = LastIndex - 1; back >= i; --back)
-						chunk.push_back(path[back]);
-				}
-
-				chunk.push_back(point.value());
-				return chunk;
-			}
-		}
-		return {};
-	};
 	
 	for (;;) {
-		auto next = TryGetPointPropagate();
+		auto next = TryGetPointWithBackPropagation(env, path, TryGetPoint, false);
 
 		//if(!next.has_value())
 		if(!next.size())
@@ -202,12 +213,12 @@ std::vector<sf::Vector2i> RightFirstPathBuilder::MakePath(const Environment& env
 	};
 
 	for (;;) {
-		auto next = TryGetPoint(path.size() - 1);
+		auto next = TryGetPointWithBackPropagation(env, path, TryGetPoint, true, true);
 
-		if(!next.has_value())
+		if(!next.size())
 			break;
-
-		path.push_back(next.value());
+		
+		std::copy(next.begin(), next.end(), std::back_inserter(path));
 	}
 
 	return path;

@@ -49,9 +49,16 @@ void MapEditor::Tick(float dt) {
 }
 void MapEditor::OnImGui() {
 	Super::OnImGui();
+	
+	auto size = m_Window.getSize();
 
-	ImGui::Begin("Map Editor");
+	static ImVec2 PrevSize(size.x * 0.3f, 0);
 
+	ImGui::SetNextWindowSize(ImVec2(PrevSize.x, size.y));
+	ImGui::Begin("Map Editor", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar);
+	PrevSize = ImGui::GetWindowSize();
+
+	ImGui::SetWindowPos({size.x - PrevSize.x, 0});
 
 	ImGui::Text("Framerate: %f", ImGui::GetIO().Framerate);
 	ImGui::Text("DrawCalls: %d", (int)Render::s_DrawcallsCount);

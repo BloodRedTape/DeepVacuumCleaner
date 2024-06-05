@@ -66,6 +66,11 @@ struct Environment {
 		return Coverage.LocalNearestVisitPointTo(LocalStartPosition());
 	}
 
+	std::optional<sf::Vector2i> LocalNearestTo(sf::Vector2i point)const {
+		return Coverage.LocalNearestVisitPointTo(point);
+	}
+
+
 	void Clear() {
 		Walls.clear();
 		Path.clear();

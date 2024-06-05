@@ -69,6 +69,9 @@ public:
 	void DrawVertex(sf::RenderTarget &rt, sf::Vector2i vertex, sf::Vector2i offset = {0, 0}, bool draw_directions = false)const;
 	
 	std::vector<sf::Vector2i> ShortestPath(sf::Vector2i src, sf::Vector2i dst)const;
+	
+	template<typename PredicateType>
+	std::optional<sf::Vector2i> BreadthSearchByPredicate(sf::Vector2i src, PredicateType predicate)const;
 
 	std::size_t CountReachableFrom(sf::Vector2i src)const;
 
@@ -86,3 +89,24 @@ public:
 
 	static Graph MakeWall(const Graph &graph);
 };
+
+template<typename PredicateType>
+inline std::optional<sf::Vector2i> Graph::BreadthSearchByPredicate(sf::Vector2i src, PredicateType predicate) const{
+	std::vector<sf::Vector2i> path;
+	path.push_back(src);
+	
+	for(int visited = 0; visited < path.size(); visited++){
+
+		const Neighbours &neighbours = At(path[visited]);
+		
+		for(auto point: neighbours.Neighbours){
+			//is not visited
+			if(std::find(path.begin(), path.end(), point) == path.end()){
+				path.push_back(point);
+				if(predicate(point))
+					return {point};
+			}
+		}
+	}
+	return std::nullopt;
+}

@@ -15,6 +15,7 @@ MapEditor::MapEditor(sf::Vector2i world_size):
 	m_Builders.push_back(std::make_unique<FirstNearWallPathBuilder>());
 	m_Builders.push_back(std::make_unique<DirectionSortPathBuilder>());
 	m_Builders.push_back(std::make_unique<RightFirstPathBuilder>());
+	m_Builders.push_back(std::make_unique<RightFirstPathForZone>());
 	//m_Builders.push_back(std::make_unique<RightFirstForWallsPathBuilder>());
 	m_Builders.push_back(std::make_unique<NonOccupiedPathBuilder>());
 
@@ -119,7 +120,7 @@ void MapEditor::OnImGui() {
 
 	ImGui::SimpleCombo("Path Builder", &m_Current, names);
 	if(ImGui::Button("Build Path")){
-		m_Env.Path = m_Builders[m_Current]->MakePath(m_Env);
+		m_Env.Path = m_Builders[m_Current]->MakePath(m_Env, m_Env.StartPosition - m_Env.Grid.Bounds.getPosition());
 		for(auto &point: m_Env.Path)
 			point += m_Env.Grid.Bounds.getPosition();
 	}

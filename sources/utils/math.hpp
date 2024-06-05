@@ -146,6 +146,19 @@ namespace Math{
 		
 		return angle % 360;
 	}
+	
+	template<typename T>
+	sf::Rect<T> MakeRect(sf::Vector2<T> first, sf::Vector2<T> second) {
+		sf::Vector2<T> min = {
+			std::min(first.x, second.x),
+			std::min(first.y, second.y)
+		};
+		sf::Vector2<T> max = {
+			std::max(first.x, second.x),
+			std::max(first.y, second.y)
+		};
+		return {min, max - min};
+	}
 
 }//namespace Math::
 

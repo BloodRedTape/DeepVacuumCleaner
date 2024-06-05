@@ -96,7 +96,7 @@ namespace Render{
         s_DrawcallsCount++;
     }
 
-	
+
 inline sf::Color hsvToRgb(float h, float s, float v) {
     if (s <= 0.0f) {
         return sf::Color(static_cast<std::uint8_t>(v * 255), static_cast<std::uint8_t>(v * 255), static_cast<std::uint8_t>(v * 255));

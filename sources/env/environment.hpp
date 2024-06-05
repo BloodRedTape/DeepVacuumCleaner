@@ -15,6 +15,7 @@ struct Environment {
 	std::vector<sf::Vector2i> Path;
 	std::vector<Wall> Walls;
 	sf::Vector2i StartPosition;
+	std::vector<sf::IntRect> ZonesToClean;
 	
 	GridDecomposition Grid;
 	CoverageDecomposition Coverage{Grid};
@@ -33,7 +34,7 @@ struct Environment {
 
 	void DrawBounds(sf::RenderTarget& rt);
 
-	void Draw(sf::RenderTarget& rt, std::size_t path_drawing_mode = 0);
+	void Draw(sf::RenderTarget& rt, std::size_t path_drawing_mode = 0, bool draw_zones_to_clean = true);
 
 	void DrawGraph(sf::RenderTarget& rt, bool with_directions, sf::Vector2i world_mouse)const {
 #ifndef GRAPH_DEBUG
@@ -53,7 +54,7 @@ struct Environment {
 
 	void LoadFromFile(const std::string& filename);
 
-	void Bake(std::size_t cell_size, sf::Vector2i start_position, bool optimized_graph);
+	void Bake(std::size_t cell_size, bool optimized_graph);
 
 	sf::IntRect GatherBounds()const;
 
@@ -69,6 +70,7 @@ struct Environment {
 		Walls.clear();
 		Path.clear();
 		Grid.Clear();
+		ZonesToClean.clear();
 		Coverage.Rebuild();
 	}
 };

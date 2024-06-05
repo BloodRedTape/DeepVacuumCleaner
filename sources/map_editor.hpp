@@ -7,20 +7,30 @@
 #include "application.hpp"
 #include "env/path.hpp"
 
+enum class EditTool: std::size_t{
+	Wall = 0,
+	Zone = 1,
+	Start = 2
+};
+
+inline std::vector<std::string> EditToolMembers() {
+	return {"Wall", "Zone", "Start Placement"};
+}
+
 class MapEditor: public ZoomMoveApplication{
 	using Super = ZoomMoveApplication;
 private:
-	std::optional<sf::Vector2i> m_WallBegin;
+	std::optional<sf::Vector2i> m_ToolCache;
 
 	Environment m_Env;
 	VacuumCleaner m_Cleaner;
 
 	bool m_DrawBounds = false;
+	bool m_DrawCleanZones = true;
 	bool m_DrawGridDecomposition = true;
 	bool m_DrawNumbers = false;
 	
 	int m_GridCellSize = 20;
-	sf::Vector2i m_StartPosition = {50, 50};
 
 	std::string m_MapFilename;
 
@@ -43,6 +53,8 @@ private:
 
 	std::vector<std::unique_ptr<PathBuilder>> m_Builders;
 	std::size_t m_Current = 0;
+
+	EditTool m_Tool = EditTool::Wall;
 public:
 
 	MapEditor(sf::Vector2i world_size);

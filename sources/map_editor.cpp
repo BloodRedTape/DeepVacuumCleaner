@@ -2,6 +2,7 @@
 #include "utils/render.hpp"
 #include "config.hpp"
 #include "utils/imgui.hpp"
+#include "utils/math.hpp"
 
 #define EDITOR_WITH_PATH 0
 
@@ -61,6 +62,7 @@ void MapEditor::OnImGui() {
 
 	ImGui::Text("Walls: %d", m_Env.Walls.size());
 	ImGui::Text("Points: %d", m_Env.Path.size());
+	ImGui::Text("CleanZones: %d", m_Env.ZonesToClean.size());
 	ImGui::Text("GraphVertices: %d", m_Env.CoverageGraph.Size());
 	if(m_Env.Grid.Bounds.getSize().x){
 		auto nearest = m_Env.LocalNearestToStartPosition();
@@ -71,8 +73,14 @@ void MapEditor::OnImGui() {
 		}
 	}
 
+	ImGui::SimpleCombo("EditTool", (std::size_t*)&m_Tool, EditToolMembers());
+
+	if(ImGui::Button("Clear Zones"))
+		m_Env.ZonesToClean.clear();
+
 	if(ImGui::Button("Clear"))
 		m_Env.Clear();
+
 
 	ImGui::InputText("Filename", m_MapFilename);
 	if (ImGui::Button("Save")) {
@@ -87,6 +95,7 @@ void MapEditor::OnImGui() {
 			continue;
 
 		if (ImGui::Button(file.path().string().c_str())) {
+			m_Env.Clear();
 			m_Env.LoadFromFile(file.path().string());
 			m_MapFilename = file.path().stem().string();
 		}
@@ -95,13 +104,14 @@ void MapEditor::OnImGui() {
 
 	ImGui::SimpleCombo("Path Drawing mode", &m_PathDrawingMode, {"None", "Points", "Line", "ColorLine"});
 	ImGui::Checkbox("Draw Bounds", &m_DrawBounds);
+	ImGui::Checkbox("Draw Clean Zones", &m_DrawCleanZones);
 	ImGui::Checkbox("Draw Grid Decomposition", &m_DrawGridDecomposition);
 	ImGui::InputInt("Grid Cell Size", &m_GridCellSize);
 	
 	ImGui::Spacing();
 	ImGui::Checkbox("Optimized Graph", &m_OptimizedGraph);
 	if (ImGui::Button("Bake"))
-		m_Env.Bake(m_GridCellSize, m_StartPosition, m_OptimizedGraph);
+		m_Env.Bake(m_GridCellSize, m_OptimizedGraph);
 	
 	std::vector<std::string> names;
 	for(const auto &builder: m_Builders)
@@ -120,7 +130,6 @@ void MapEditor::OnImGui() {
 
 	if (m_CoveragePathDebugging) {
 		ImGui::SimpleCombo("Draw About", &m_ForAllCells, "Whole Map", "Cell under cursor");
-		ImGui::Checkbox("ForAllCells", &m_ForAllCells);
 		ImGui::Checkbox("DrawCurrentCell", &m_DrawCurrentCell);
 		ImGui::Checkbox("DrawZoneDecomposition", &m_DrawZoneDecomposition);
 		ImGui::Checkbox("DrawFullZoneDecomposition", &m_DrawFullZoneDecomposition);
@@ -156,11 +165,18 @@ void MapEditor::Render(sf::RenderTarget& rt) {
 
 	if(m_CoveragePathDebugging && m_DrawCoverageGraph)
 		m_Env.DrawGraph(rt, m_DrawCoverageGraphDirecions, WorldMousePosition());
-	m_Env.Draw(rt, m_PathDrawingMode);
+	m_Env.Draw(rt, m_PathDrawingMode, m_DrawCleanZones);
 
-
-	if (m_WallBegin.has_value()) {
-		Render::DrawLine(rt, m_WallBegin.value(), MakeEndPoint(), m_Env.RenderWallHeight);
+	
+	if(m_Tool == EditTool::Wall){
+		if (m_ToolCache.has_value()) {
+			Render::DrawLine(rt, m_ToolCache.value(), MakeEndPoint(), m_Env.RenderWallHeight);
+		}
+	}
+	if(m_Tool == EditTool::Zone){
+		if (m_ToolCache.has_value()) {
+			Render::DrawRect(rt, Math::MakeRect(m_ToolCache.value(), MakeEndPoint()), sf::Color::Yellow * sf::Color(255, 255, 255, 40), 4, sf::Color::Yellow);
+		}
 	}
 
 	m_Cleaner.Draw(rt);
@@ -174,35 +190,35 @@ void MapEditor::OnEvent(const sf::Event& e){
 		if (const auto* mouse = e.getIf<sf::Event::MouseButtonPressed>()) {
 			auto point = WorldMousePosition();
 
-#if EDITOR_WITH_PATH
-			if(mouse->button == sf::Mouse::Button::Left){
-
-				if(std::find(m_Env.Path.begin(), m_Env.Path.end(), point) == m_Env.Path.end())
-					m_Env.Path.push_back(point);
-			}
-#endif
-#define EDITOR_WITH_START 1
-#if EDITOR_WITH_START
-			if(mouse->button == sf::Mouse::Button::Left){
-				m_Env.StartPosition = (point);
-			}
-#endif
-
 			if(mouse->button == sf::Mouse::Button::Right){
 				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LAlt))
 					point = TryGridSnap(point);
 				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl))
 					point = TryWallSnap(point);
 
-				m_WallBegin = point;
+				m_ToolCache = point;
+			}
+
+			
+			if(m_Tool == EditTool::Start){
+				m_Env.StartPosition = WorldMousePosition();
 			}
 		}
 
 		if (const auto *mouse = e.getIf<sf::Event::MouseButtonReleased>()){
-			if(mouse->button == sf::Mouse::Button::Right && m_WallBegin.has_value()){
-				m_Env.Walls.push_back({m_WallBegin.value(), MakeEndPoint()});
-				m_WallBegin.reset();
+			if(m_Tool == EditTool::Wall){
+				if(mouse->button == sf::Mouse::Button::Right && m_ToolCache.has_value()){
+					m_Env.Walls.push_back({m_ToolCache.value(), MakeEndPoint()});
+				}
 			}
+
+			if (m_Tool == EditTool::Zone) {
+				if(mouse->button == sf::Mouse::Button::Right && m_ToolCache.has_value()){
+					m_Env.ZonesToClean.push_back(Math::MakeRect(m_ToolCache.value(), MakeEndPoint()));
+				}
+
+			}
+			m_ToolCache.reset();
 		}
 	}
 
@@ -227,12 +243,12 @@ sf::Vector2i MapEditor::MakeEndPoint() const{
 	sf::Vector2i point = WorldMousePosition();
 
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)) {
-		sf::Vector2i direction = (point - m_WallBegin.value());
+		sf::Vector2i direction = (point - m_ToolCache.value());
 
 		if(std::abs(direction.x) < std::abs(direction.y))
-			point.x = m_WallBegin.value().x;
+			point.x = m_ToolCache.value().x;
 		else
-			point.y = m_WallBegin.value().y;
+			point.y = m_ToolCache.value().y;
 	}
 
 	if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LAlt))

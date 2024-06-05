@@ -31,7 +31,7 @@ void Environment::DrawBounds(sf::RenderTarget& rt) {
 	Render::DrawLine(rt, bounds.getPosition() + bounds.getSize(), bounds.getPosition() + sf::Vector2f(bounds.getSize().x, 0), 5.f, BoundsColor);
 }
 
-void Environment::Draw(sf::RenderTarget& rt, std::size_t path_drawing_mode) {
+void Environment::Draw(sf::RenderTarget& rt, std::size_t path_drawing_mode, bool draw_zones_to_clean) {
 	
 	constexpr float PointRadius = 5.f;
 
@@ -67,6 +67,12 @@ void Environment::Draw(sf::RenderTarget& rt, std::size_t path_drawing_mode) {
 
 	for (const auto &wall : Walls)
 		Render::DrawLine(rt, wall.Start, wall.End, RenderWallHeight);
+
+	if(draw_zones_to_clean){
+		for (auto zone : ZonesToClean) {
+			Render::DrawRect(rt, zone, sf::Color::Yellow * sf::Color(255, 255, 255, 20), 4, sf::Color::Yellow);
+		}
+	}
 }
 
 static void DrawForCell(const CoverageDecomposition& builder, sf::RenderTarget& rt, sf::Vector2i coverage_cell, bool zone, bool full_zone, bool points, bool cell_outline) {
@@ -181,10 +187,9 @@ void Environment::LoadFromFile(const std::string& filename) {
 	Walls = std::move(walls.value());
 }
 
-void Environment::Bake(std::size_t cell_size, sf::Vector2i start_position, bool optimized_graph) {
+void Environment::Bake(std::size_t cell_size, bool optimized_graph) {
 	LogEnvIf(Path.size(), Warning, "Path is already generated, overwriting");
 	Path.clear();
-	StartPosition = start_position;
 
 	Coverage.CoverageSize = (CleanerRadius * 2) / cell_size;
 	FrameSize = sf::Vector2i(cell_size, cell_size) * int(Coverage.CoverageSize);

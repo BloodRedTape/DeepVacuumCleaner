@@ -6,7 +6,7 @@ constexpr float Eps = 0.001;
 
 constexpr float PointRadius = 5.f;
 
-constexpr float CleanerRadius = 60.f;
+constexpr float CleanerRadius = 30.f;
 constexpr float CleanerRayLength = 40;
 static sf::Vector2f CleanerSpeed(60, 10);
 

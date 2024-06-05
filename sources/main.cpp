@@ -1,6 +1,7 @@
 ﻿#include "application.hpp"
 #include "map_editor.hpp"
 #include "model/evolution_training.hpp"
+#include "model/stupid_agent.hpp"
 #include "utils/imgui.hpp"
 #include "utils/math.hpp"
 #include <iostream>
@@ -84,6 +85,56 @@ public:
 	}
 };
 
+class StupidAgentDemoApp: public ZoomMoveApplication{
+	using Super = ZoomMoveApplication;
+private:
+	StupidAgent m_Agent;
+	VacuumCleaner m_Cleaner;
+	Environment m_Env;
+
+	float m_Speed = 1.f;
+public:
+	StupidAgentDemoApp(sf::Vector2i size, std::optional<std::string> map):
+		Super(size)
+	{
+		if(map.has_value())
+			m_Env.LoadFromFile(map.value());
+
+		m_Window.setVerticalSyncEnabled(true);
+		m_Window.setFramerateLimit(60);
+		m_View.zoom(2);
+
+		m_Cleaner.Position = sf::Vector2f(m_Env.StartPosition);
+	}
+
+	virtual void Tick(float dt) override{
+		Super::Tick(dt);
+
+		for(int i = 0; i < int(m_Speed); i++)
+			m_Agent.Update(dt, m_Cleaner, m_Env);
+	}
+
+	void OnImGui()override {
+		ImGui::Begin("Info");
+		ImGui::Text("%d", m_Agent.Goal());
+
+		ImGui::DragFloat("Speed", &m_Speed, 1.f, 1.f, 50);
+
+		if(ImGui::Button("Reset")){
+			m_Cleaner.Position = sf::Vector2f(m_Env.StartPosition);
+			m_Agent.Reset();
+		}
+		ImGui::End();
+	}
+
+	virtual void Render(sf::RenderTarget& rt) override{
+		Super::Render(rt);
+
+		m_Env.Draw(rt, Environment::PathWithColorLines, true);
+		m_Cleaner.Draw(rt);
+	}
+};
+
 template<typename AppType>
 std::unique_ptr<Application> MakeApp(sf::Vector2i size) {
 	return std::make_unique<AppType>(size);
@@ -94,6 +145,11 @@ std::unique_ptr<Application> MakeApp<EvolutionTrainingApp>(sf::Vector2i size) {
 	return std::make_unique<EvolutionTrainingApp>(size, "best.mod", "room1_with_path.map");
 }
 
+template<>
+std::unique_ptr<Application> MakeApp<StupidAgentDemoApp>(sf::Vector2i size) {
+	return std::make_unique<StupidAgentDemoApp>(size, "gh_with_zones_and_path.map");
+}
+
 int main()
 {
 	srand(time(0));
@@ -102,7 +158,7 @@ int main()
 
 	WriteEntireFile("test/file.txt", "Hello");
 	
-	MakeApp<MapEditor>({1920, 1080})->Run();
+	MakeApp<StupidAgentDemoApp>({1920, 1080})->Run();
 	
 	return 0;
 }

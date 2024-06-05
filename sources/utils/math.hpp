@@ -146,6 +146,11 @@ namespace Math{
 		
 		return angle % 360;
 	}
+
+	template<typename T>
+	float AngleSigned(const sf::Vector2<T> &v1, const sf::Vector2<T> &v2){
+		return sf::Vector2f(v1).normalized().angleTo(sf::Vector2f(v2).normalized()).asDegrees();
+	}
 	
 	template<typename T>
 	sf::Rect<T> MakeRect(sf::Vector2<T> first, sf::Vector2<T> second) {

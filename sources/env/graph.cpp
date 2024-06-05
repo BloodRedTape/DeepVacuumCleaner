@@ -56,17 +56,25 @@ void Graph::DrawVertex(sf::RenderTarget& rt, sf::Vector2i vertex, sf::Vector2i o
 
 //we don't include Src point
 std::vector<sf::Vector2i> Graph::ShortestPath(sf::Vector2i src, sf::Vector2i dst) const {
-	auto Heuristic = [](const sf::Vector2i& a, const sf::Vector2i& b)->int {
-		return std::abs(a.x - b.x) + std::abs(a.y - b.y);
-	};
+    auto Heuristic = [](const sf::Vector2i& a, const sf::Vector2i& b) -> int {
+        return std::abs(a.x - b.x) + std::abs(a.y - b.y);
+    };
+
+    auto Distance = [](const sf::Vector2i& a, const sf::Vector2i& b) -> double {
+        return std::sqrt(std::pow(a.x - b.x, 2) + std::pow(a.y - b.y, 2));
+    };
 
     std::unordered_map<sf::Vector2i, sf::Vector2i, std::hash<sf::Vector2i>> came_from;     // To reconstruct the path
-    std::unordered_map<sf::Vector2i, int, std::hash<sf::Vector2i>> cost_so_far;            // Cost from src to n
+    std::unordered_map<sf::Vector2i, double, std::hash<sf::Vector2i>> cost_so_far;         // Cost from src to n
 
-    auto compare = [](const std::pair<sf::Vector2i, int>& a, const std::pair<sf::Vector2i, int>& b){
+    auto compare = [](const std::pair<sf::Vector2i, double>& a, const std::pair<sf::Vector2i, double>& b) {
         return a.second > b.second;
     };
-    std::priority_queue<std::pair<sf::Vector2i, int>, std::vector<std::pair<sf::Vector2i, int>>, decltype(compare)> frontier(compare);
+    std::priority_queue<
+        std::pair<sf::Vector2i, double>,
+        std::vector<std::pair<sf::Vector2i, double>>,
+        decltype(compare)
+    > frontier(compare);
 
     frontier.emplace(src, 0);
     came_from[src] = src;
@@ -82,10 +90,10 @@ std::vector<sf::Vector2i> Graph::ShortestPath(sf::Vector2i src, sf::Vector2i dst
 
         const auto& neighbors = m_Vertices[current].Neighbours;
         for (const auto& next : neighbors) {
-            int new_cost = cost_so_far[current] + 1; // Assuming the graph is unweighted (cost=1 for each move)
+            double new_cost = cost_so_far[current] + Distance(current, next);
             if (cost_so_far.find(next) == cost_so_far.end() || new_cost < cost_so_far[next]) {
                 cost_so_far[next] = new_cost;
-                int priority = new_cost + Heuristic(next, dst);
+                double priority = new_cost + Heuristic(next, dst);
                 frontier.emplace(next, priority);
                 came_from[next] = current;
             }

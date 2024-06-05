@@ -170,6 +170,7 @@ void Environment::SaveToFile(const std::string& filename) {
 	
 	Serializer<std::vector<sf::Vector2i>>::ToStream(Path, file);
 	Serializer<std::vector<Wall>>::ToStream(Walls, file);
+	Serializer<std::vector<sf::IntRect>>::ToStream(ZonesToClean, file);
 }
 
 void Environment::LoadFromFile(const std::string& filename) {
@@ -179,12 +180,15 @@ void Environment::LoadFromFile(const std::string& filename) {
 
 	auto path = Serializer<std::vector<sf::Vector2i>>::FromStream(file);
 	auto walls = Serializer<std::vector<Wall>>::FromStream(file);
+	auto zones = Serializer<std::vector<sf::IntRect>>::FromStream(file);
 
 	if(!path.has_value() || !walls.has_value())
 		return;
 
 	Path = std::move(path.value());
 	Walls = std::move(walls.value());
+	if(zones.has_value())
+		ZonesToClean = std::move(zones.value());
 }
 
 void Environment::Bake(std::size_t cell_size, bool optimized_graph) {

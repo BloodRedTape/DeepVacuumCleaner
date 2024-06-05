@@ -91,17 +91,12 @@ std::unique_ptr<Application> MakeApp(sf::Vector2i size) {
 
 template<>
 std::unique_ptr<Application> MakeApp<EvolutionTrainingApp>(sf::Vector2i size) {
-	return std::make_unique<EvolutionTrainingApp>(size, "best.mod", "room1.map");
+	return std::make_unique<EvolutionTrainingApp>(size, "best.mod", "room1_with_path.map");
 }
 
 int main()
 {
 	srand(time(0));
-
-
-	Println("%", Math::AngleCouterClockwize(sf::Vector2f(0, 1), sf::Vector2f(-1, 0)));
-	Println("%", Math::AngleCouterClockwize(sf::Vector2f(0, 1), sf::Vector2f(0, -1)));
-	Println("%", Math::AngleCouterClockwize(sf::Vector2f(0, 1), sf::Vector2f(1, 0)));
 
 	std::filesystem::current_path("../../../run_tree");
 

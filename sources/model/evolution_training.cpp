@@ -173,7 +173,7 @@ std::vector<VacuumCleanerOperator> EvolutionTraining::PopulationFromSorted(const
 }
 
 void EvolutionTraining::Draw(sf::RenderTarget& rt, bool debug) {
-	m_Env.Draw(rt);
+	m_Env.Draw(rt, Environment::PathWithColorLines);
 
 	for (const auto& agent : m_Population) {
 		agent.Draw(rt);

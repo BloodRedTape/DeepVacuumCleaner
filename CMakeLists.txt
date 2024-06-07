@@ -5,6 +5,7 @@ cmake_policy(SET CMP0091 NEW)
 project ("DeepVacuumCleaner")
 
 add_subdirectory(libs/sfml)
+add_subdirectory(libs/sfpl)
 add_subdirectory(libs/bsl)
 find_package(imgui REQUIRED)
 find_package(freetype REQUIRED)
@@ -22,7 +23,8 @@ add_executable (DeepVacuumCleaner
 	"sources/env/environment.cpp" 
 	"sources/model/vacuum_cleaner.cpp" 
 	"sources/map_editor.cpp"
-	"sources/model/stupid_agent.cpp" 
+	"sources/agents/stupid_agent.cpp" 
+	"sources/agents/nn_agent.cpp" 
 	"sources/model/neural_network_agent.cpp" 
 	"sources/model/vacuum_cleaner_operator.cpp" 
 	"sources/model/evolution_training.cpp"
@@ -31,9 +33,9 @@ add_executable (DeepVacuumCleaner
 	"sources/env/wall.cpp" 
 	"sources/env/graph.cpp"
 	"sources/env/path.cpp"
-)
+ "sources/agents/agent.cpp")
 
 target_include_directories(DeepVacuumCleaner PUBLIC "./sources")
 
-target_link_libraries(DeepVacuumCleaner ImGui-SFML bsl)
+target_link_libraries(DeepVacuumCleaner ImGui-SFML bsl sfpl)
 

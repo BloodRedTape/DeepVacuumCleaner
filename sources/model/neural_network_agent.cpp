@@ -1,6 +1,6 @@
 #include "neural_network_agent.hpp"
 #include "utils/math.hpp"
-#include "stupid_agent.hpp"
+#include "agents/stupid_agent.hpp"
 #include "config.hpp"
 
 NeuralNetworkAgent::NeuralNetworkAgent(NeuralNetwork &&nn):
@@ -9,7 +9,7 @@ NeuralNetworkAgent::NeuralNetworkAgent(NeuralNetwork &&nn):
 
 NeuralNetworkAgent::NeuralNetworkAgent(int num_sensors):
 	m_NN(
-		{num_sensors + 3, 32, 20, 10, 2},
+		{num_sensors + 2, 32, 20, 10, 2},
 		{"None", "Tanh", "None", "Tanh", "Tanh"}
 	)
 {}
@@ -23,43 +23,24 @@ sf::Vector2f NeuralNetworkAgent::Iterate(const VacuumCleaner &cleaner, const Env
 
 	m_Iteration = it;
 
-	sf::Vector2f goal(env.Path[m_CurrentGoal]);
+	VacuumCleanerState state = cleaner.GetState(m_CurrentGoal, env);
 
-	auto direction = goal - cleaner.Position;
-	
-	float difference_with_goal = acos(direction.normalized().dot(cleaner.Direction().normalized())) / 3.14 * 180;
-		
-	Matrix<float> input(1, cleaner.Sensors.size() + 3);
+	auto move = NeuralNetworkAgent::MoveFromMatrix(
+		m_NN.Do(
+			NeuralNetworkAgent::StateToMatrix(state)
+		)
+	);
 
-	for (int i = 0; i < cleaner.Sensors.size(); i++) {
-		const auto &sensor = cleaner.Sensors[i];
-
-		auto direction = Math::RotationToDirection(cleaner.Rotation + sensor.Rotation);
-		auto start = cleaner.Position + CleanerRadius * direction; 
-
-		input[0][i] = Wall::TraceNearestObstacle(start, direction, env.Walls);
-	}
-
-	input[0][cleaner.Sensors.size()    ] = 0.f;//cleaner.Rotation;
-	input[0][cleaner.Sensors.size() + 1] = difference_with_goal;
-	input[0][cleaner.Sensors.size() + 2] = direction.length();
-
-	auto output = m_NN.Do(input);
-
-	float forward  = output[0][0];
-	float rotation = output[0][1];
-
-	float distance_to_goal = (goal - cleaner.Position).length();
+	float forward  = move.x;
+	float rotation = move.y;
 
 	m_TotalDistanceTraveled += forward;
-	m_CurrentDistanceToGoal = distance_to_goal;
+	m_CurrentDistanceToGoal = state.DistanceToGoal;
 
+	m_MinDistanceToGoal = std::min(m_MinDistanceToGoal, state.DistanceToGoal);
+	m_MaxDistanceToGoal = std::max(m_MaxDistanceToGoal, state.DistanceToGoal);
 
-	m_MinDistanceToGoal = std::min(m_MinDistanceToGoal, distance_to_goal);
-	m_MaxDistanceToGoal = std::max(m_MaxDistanceToGoal, distance_to_goal);
-
-
-	if (distance_to_goal < CleanerRadius)
+	if (state.DistanceToGoal < CleanerRadius)
 		BeginGoal(m_CurrentGoal + 1, cleaner, env);
 
 	return {forward, rotation};
@@ -135,4 +116,29 @@ NeuralNetworkAgent NeuralNetworkAgent::Crossover(const NeuralNetworkAgent& first
 
 NeuralNetworkAgent NeuralNetworkAgent::Mutate(const NeuralNetworkAgent& agent, float chance, float range) {
 	return {NeuralNetwork::MutateNetwork(agent.m_NN, chance, range)};
+}
+
+Matrix<float> NeuralNetworkAgent::StateToMatrix(const VacuumCleanerState& state) {
+	Matrix<float> input(1, state.SensorsData.size() + 2);
+
+	for (int i = 0; i < state.SensorsData.size(); i++)
+		input[0][i] = state.SensorsData[i];
+
+	input[0][state.SensorsData.size()    ] = state.DistanceToGoal;
+	input[0][state.SensorsData.size() + 1] = state.RotationToGoal;
+	
+	return input;
+}
+
+sf::Vector2f NeuralNetworkAgent::MoveFromMatrix(const Matrix<float>& out) {
+	const Matrix<float> &output = out;
+	float forward  = output[0][0];
+	float rotation = output[0][1];
+	return {forward, rotation};
+}
+Matrix<float> NeuralNetworkAgent::MoveToMatrix(sf::Vector2f move) {
+	Matrix<float> m(1, 2);
+	m[0][0] = move.x;
+	m[0][1] = move.y;
+	return m;
 }

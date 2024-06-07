@@ -8,7 +8,7 @@ constexpr float PointRadius = 5.f;
 
 constexpr float CleanerRadius = 30.f;
 constexpr float CleanerRayLength = 40;
-static sf::Vector2f CleanerSpeed(60, 10);
+static sf::Vector2f CleanerSpeed(60, 60);
 
 constexpr float MutationChance = 0.5;
 constexpr float MutationRange = 100;

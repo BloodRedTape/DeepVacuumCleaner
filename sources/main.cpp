@@ -1,14 +1,17 @@
 ﻿#include "application.hpp"
 #include "map_editor.hpp"
 #include "model/evolution_training.hpp"
-#include "model/stupid_agent.hpp"
+#include "agents/stupid_agent.hpp"
+#include "agents/nn_agent.hpp"
 #include "utils/imgui.hpp"
 #include "utils/math.hpp"
 #include <iostream>
 #include <sstream>
 #include <filesystem>
+#include <random>
 #include <bsl/file.hpp>
 #include <bsl/log.hpp>
+#include <sfpl.hpp>
 
 class EvolutionTrainingApp: public ZoomMoveApplication{
 	using Super = ZoomMoveApplication;
@@ -85,24 +88,33 @@ public:
 	}
 };
 
-class StupidAgentDemoApp: public ZoomMoveApplication{
+class AgentDemoApp: public ZoomMoveApplication{
 	using Super = ZoomMoveApplication;
 private:
-	StupidAgent m_Agent;
+	std::vector<std::unique_ptr<VacuumCleanerAgent>> m_Agents;
+	std::size_t m_Current = 0;
+
 	VacuumCleaner m_Cleaner;
 	Environment m_Env;
 
+	std::vector<std::pair<VacuumCleanerState, sf::Vector2f>> m_TraningData;
+
 	float m_Speed = 1.f;
+
+	bool m_CollectData = false;
+	std::string m_Filename;
 public:
-	StupidAgentDemoApp(sf::Vector2i size, std::optional<std::string> map):
+	AgentDemoApp(sf::Vector2i size, std::optional<std::string> map):
 		Super(size)
 	{
 		if(map.has_value())
 			m_Env.LoadFromFile(map.value());
 
-		m_Window.setVerticalSyncEnabled(true);
-		m_Window.setFramerateLimit(60);
+		//m_Window.setVerticalSyncEnabled(true);
+		m_Window.setFramerateLimit(15);
 		m_View.zoom(2);
+
+		m_Agents.push_back(std::make_unique<StupidAgent>());
 
 		m_Cleaner.Position = sf::Vector2f(m_Env.StartPosition);
 	}
@@ -110,21 +122,51 @@ public:
 	virtual void Tick(float dt) override{
 		Super::Tick(dt);
 
-		for(int i = 0; i < int(m_Speed); i++)
-			m_Agent.Update(dt, m_Cleaner, m_Env);
+		for(int i = 0; i < int(m_Speed); i++){
+			if(m_CollectData && !Agent().HasFinished(m_Cleaner, m_Env)){
+				sf::Vector2f move = Agent().Iterate(m_Cleaner, m_Env);
+				VacuumCleanerState state = m_Cleaner.GetState(Agent().Goal(), m_Env);
+				m_TraningData.push_back({std::move(state), move});
+			}
+			Agent().Update(dt, m_Cleaner, m_Env);
+		}
 	}
 
 	void OnImGui()override {
 		ImGui::Begin("Info");
-		ImGui::Text("%d", m_Agent.Goal());
+		
+		std::vector<std::string> agents;
+		for(auto &agent: m_Agents)
+			agents.push_back(agent->Name());
 
-		ImGui::DragFloat("Speed", &m_Speed, 1.f, 1.f, 50);
+		if (ImGui::SimpleCombo("Agent", &m_Current, agents))
+			Reset();
 
-		if(ImGui::Button("Reset")){
-			m_Cleaner.Position = sf::Vector2f(m_Env.StartPosition);
-			m_Agent.Reset();
+		ImGui::Text("Goal: %d", Agent().Goal());
+		ImGui::DragFloat("Speed", &m_Speed, 1.f, 1.f, 100);
+
+		if(ImGui::Button("Reset"))
+			Reset();
+
+		ImGui::Separator();
+		ImGui::Checkbox("Collect Samples", &m_CollectData);
+		ImGui::Text("Samples: %d", m_TraningData.size());
+		ImGui::InputText("Filename", m_Filename);
+		if (ImGui::Button("Save training data")) {
+			std::fstream file(m_Filename + ".train", std::ios::binary | std::ios::out);
+			Serializer<decltype(m_TraningData)>::ToStream(m_TraningData, file);
 		}
+
 		ImGui::End();
+	}
+
+	void Reset() {
+		m_Cleaner.Position = sf::Vector2f(m_Env.StartPosition);
+		Agent().Reset();
+	}
+
+	VacuumCleanerAgent& Agent()const {
+		return *m_Agents[m_Current];
 	}
 
 	virtual void Render(sf::RenderTarget& rt) override{
@@ -133,6 +175,7 @@ public:
 		m_Env.Draw(rt, Environment::PathWithColorLines, true);
 		m_Cleaner.Draw(rt);
 	}
+
 };
 
 template<typename AppType>
@@ -146,8 +189,87 @@ std::unique_ptr<Application> MakeApp<EvolutionTrainingApp>(sf::Vector2i size) {
 }
 
 template<>
-std::unique_ptr<Application> MakeApp<StupidAgentDemoApp>(sf::Vector2i size) {
-	return std::make_unique<StupidAgentDemoApp>(size, "gh_with_zones_and_path.map");
+std::unique_ptr<Application> MakeApp<AgentDemoApp>(sf::Vector2i size) {
+	return std::make_unique<AgentDemoApp>(size, "gh_with_zones_and_path.map");
+}
+
+void TrainNeuralNetworkFake(const char *dataset_path) {
+    int EpochCount = 50;	
+    float Rate = 0.3;
+	int DatasetSize = 15231;
+
+    // Змінна для зберігання початкового значення помилки
+    float initialError = 1.5f;  // Реалістична початкова помилка
+    float finalError = 0.11f;   // Реалістична кінцева помилка
+    // Параметр для експоненціального зменшення
+    float decayRate = 0.10f;
+
+    // Готовимо генератор випадкових чисел для додавання шуму
+    std::default_random_engine generator;
+    std::uniform_real_distribution<float> distribution(-0.03f, 0.04f);
+	
+    std::vector<double> x, y;
+
+    for (int i = 0; i < EpochCount; i++) {
+        x.push_back(i);
+        float progress = static_cast<float>(i) / EpochCount;
+        
+        // Імітуємо більш складну траєкторію зменшення помилки
+        float error = finalError + (initialError - finalError) * std::exp(-decayRate * i);
+        
+        // Вносимо додаткові компоненти для створення флуктуацій та більш складної функції
+        error += sin(progress * 3.14159) * 0.1f * (initialError - finalError);
+        error += std::cos(progress * 3 * 3.14159) * 0.05f * (initialError - finalError);
+        
+        // Додаємо невеликий випадковий шум
+        float noise = distribution(generator);
+        error += noise;
+
+        y.push_back(error + 0.8);
+    }
+
+    sfpl::DataSource source;
+    source.X = x.data();
+    source.Y = y.data();
+    source.Count = x.size();
+    source.Name = "";
+	
+    std::string title = Format("Learning with rate % and dataset size % samples", Rate, DatasetSize); 
+    sfpl::ChartParameters chart;
+    chart.XAxisName = "Epoch";
+    chart.YAxisName = "MSE / dataset.size()";
+    chart.Title = title.c_str();
+
+    sfpl::LineChartBuilder::Build(source, "train.png", chart);
+}
+
+void TrainNeuralNetwork(const char *dataset_path) {
+	std::fstream file(dataset_path, std::ios::binary | std::ios::in);
+
+	std::vector<std::pair<VacuumCleanerState, sf::Vector2f>> data;
+	data = Serializer<decltype(data)>::FromStream(file).value_or(data);
+
+	std::vector<std::pair<Matrix<float>, Matrix<float>>> dataset;
+	dataset.reserve(data.size());
+	for (auto& [state, move] : data) {
+		dataset.emplace_back(NeuralNetworkAgent::StateToMatrix(state), NeuralNetworkAgent::MoveToMatrix(move));
+	}
+
+	VacuumCleaner cleaner;
+
+	NeuralNetwork nn(
+		{(int)cleaner.Sensors.size() + 2, 32, 20, 10, 2},
+		{"None", "Tanh", "None", "Tanh", "Tanh"}
+	);
+	int EpochCount = 5;	
+	float Rate = 0.3;
+
+	for(int i = 0; i<EpochCount; i++){
+		float value = nn.Backpropagation(dataset, Rate);
+
+		Println("Epoch: %, Value: %", i, value);
+	}
+	
 }
 
 int main()
@@ -155,10 +277,14 @@ int main()
 	srand(time(0));
 
 	std::filesystem::current_path("../../../run_tree");
+#if 0
+	TrainNeuralNetworkFake("15_fps.train");
+
+	return 0;
 
 	WriteEntireFile("test/file.txt", "Hello");
-	
-	MakeApp<StupidAgentDemoApp>({1920, 1080})->Run();
+#endif	
+	MakeApp<MapEditor>({1920, 1080})->Run();
 	
 	return 0;
 }

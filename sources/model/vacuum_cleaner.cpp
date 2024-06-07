@@ -39,6 +39,27 @@ sf::Vector2f VacuumCleaner::Direction()const {
 	return Math::RotationToDirection(Rotation);
 }
 
+VacuumCleanerState VacuumCleaner::GetState(std::size_t current_goal, const Environment& env)const {
+	VacuumCleanerState state;
+	sf::Vector2f goal(env.Path[current_goal]);
+
+	auto direction = goal - Position;
+	
+	float difference_with_goal = acos(direction.normalized().dot(Direction().normalized())) / 3.14 * 180;
+		
+	for (auto sensor: Sensors) {
+		auto direction = Math::RotationToDirection(Rotation + sensor.Rotation);
+		auto start = Position + CleanerRadius * direction; 
+
+		state.SensorsData.push_back(Wall::TraceNearestObstacle(start, direction, env.Walls));
+	}
+
+	state.RotationToGoal = difference_with_goal;
+	state.DistanceToGoal = direction.length();
+
+	return state;
+}
+
 void VacuumCleaner::DrawIntersections(sf::RenderTarget& rt, const Environment &env) {
 	const auto &cleaner = *this;
 

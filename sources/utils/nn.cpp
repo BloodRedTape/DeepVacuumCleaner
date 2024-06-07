@@ -62,8 +62,21 @@ const Matrix<float>& Layer::Biases()const {
 	return m_Biases;
 }
 
+Matrix<float>& Layer::Weights(){
+	return m_Weights;
+}
+
+Matrix<float>& Layer::Biases(){
+	return m_Biases;
+}
+
+
 const std::string& Layer::FunctionName()const {
 	return m_FunctionName;
+}
+
+ActivationFunction::Ptr Layer::Function()const {
+    return m_Function;
 }
 
 bool Layer::IsComplete()const {
@@ -124,11 +137,91 @@ NeuralNetwork::NeuralNetwork(std::vector<int> topology, std::vector<std::string>
 	}
 }
 
-Matrix<float> NeuralNetwork::Do(Matrix<float> Input) {
+Matrix<float> NeuralNetwork::Do(Matrix<float> Input)const{
 	for (const auto& layer : m_Model) {
 		Input = layer.Do(Input);
 	}
 	return Input;
+}
+
+float ComputeMeanSquaredError(const Matrix<float>& prediction, const Matrix<float>& target) {
+    Matrix<float> diff = prediction - target;
+    float mse = 0.0f;
+    size_t count = diff.Count();
+    for (size_t i = 0; i < count; ++i) {
+        mse += diff.Data()[i] * diff.Data()[i];
+    }
+    return mse / static_cast<float>(count);
+}
+
+Matrix<float> NeuralNetwork::MeanSquaredErrorDerivative(const Matrix<float>& prediction, const Matrix<float>& target) {
+    Matrix<float> result = prediction - target;
+    result.ForEach([](float& val) { val *= 2.0f; });
+    return result;
+}
+
+float NumericalDerivative(ActivationFunction::Ptr func, float x) {
+    const float epsilon = 1e-5;
+    return (func(x + epsilon) - func(x - epsilon)) / (2.0f * epsilon);
+}
+
+
+Matrix<float> ActivationFunctionDerivative(ActivationFunction::Ptr func, const Matrix<float>& mat) {
+    Matrix<float> result(mat.N(), mat.M());
+    for (size_t i = 0; i < mat.N(); ++i) {
+        for (size_t j = 0; j < mat.M(); ++j) {
+            result[i][j] = NumericalDerivative(func, mat[i][j]);
+        }
+    }
+    return result;
+}
+
+float NeuralNetwork::Backpropagation(const std::vector<std::pair<Matrix<float>, Matrix<float>>>& dataset, float learning_rate) {
+    float totalError = 0.0f;
+    
+    for (const auto& data : dataset) {
+        Matrix<float> input = data.first;
+        Matrix<float> target = data.second;
+
+        // Forward pass
+        std::vector<Matrix<float>> layer_inputs;
+        std::vector<Matrix<float>> layer_outputs = { input };
+        
+        for (const auto& layer : m_Model) {
+            input = layer.Do(input);
+            layer_inputs.push_back(input);
+            layer_outputs.push_back(input);
+        }
+
+        Matrix<float> output = layer_outputs.back();
+        totalError += ComputeMeanSquaredError(output, target);
+
+        // Backward pass
+        Matrix<float> error = MeanSquaredErrorDerivative(output, target);
+        
+        for (int i = m_Model.size() - 1; i >= 0; --i) {
+            const Matrix<float>& layer_output = layer_outputs[i + 1];
+            const Matrix<float>& layer_input = layer_outputs[i];
+            Layer& layer = m_Model[i];
+
+            // Compute gradients
+            Matrix<float> output_derivative = ActivationFunctionDerivative(layer.Function(), layer_output);
+            Matrix<float> delta = error * output_derivative.Transpose(); // Element-wise multiplication
+            Matrix<float> weight_gradient = layer_input.Transpose() * delta;
+            Matrix<float> bias_gradient = delta;  // Biases are typically vectors, directly summing the delta values
+
+            // Update weights and biases
+            layer.Weights() = layer.Weights() - (weight_gradient * learning_rate);
+            layer.Biases() = layer.Biases() - (bias_gradient.Transpose() * learning_rate);
+            
+            // Compute error for next layer if not the first layer
+            if (i > 0) {
+                error = delta * layer.Weights().Transpose();
+            }
+        }
+    }
+    
+    return totalError / dataset.size();
 }
 
 NeuralNetwork NeuralNetwork::Crossover(const NeuralNetwork& parent1, const NeuralNetwork& parent2) {

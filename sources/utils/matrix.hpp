@@ -8,6 +8,10 @@
 #include <istream>
 
 #include "bsl/serialization_std.hpp"
+#include "bsl/assert.hpp"
+
+#undef assert
+#define assert verify
 
 template<typename Type>
 class Columns{
@@ -35,6 +39,8 @@ class Matrix{
 	size_t m_N = 0;
 	size_t m_M = 0;
 public:
+	Matrix() = default;
+
 	Matrix(size_t n, size_t m): 
 		m_N(n), 
 		m_M(m) 
@@ -47,14 +53,14 @@ public:
 		std::memset(m_Data, 0, Count() * sizeof(Type));
 	}
 
-	Matrix(Matrix&& other) {
+	Matrix(Matrix&& other)noexcept{
 		*this = std::move(other);
 	}
 
 	~Matrix(){
 		Clear();
 	}
-	Matrix &operator=(Matrix&& other) {
+	Matrix &operator=(Matrix&& other)noexcept{
 		Clear();
 		std::swap(m_Data, other.m_Data);
 		std::swap(m_N, other.m_N);
@@ -109,6 +115,8 @@ public:
 		return {&m_Data[n * m_M], m_M};
 	}
 
+	Matrix<Type> Transpose() const;
+
 	size_t N()const{
 		return m_N;
 	}
@@ -144,6 +152,16 @@ public:
 	}
 
 	template<typename Predicate>
+	Matrix<Type> Transformed(Predicate pred)const{
+		Matrix<Type> result(N(), M());
+
+		for (int i = 0; i < Count(); i++)
+			result.Data()[i] = pred(Data()[i]);
+
+		return result;
+	}
+
+	template<typename Predicate>
 	void ForEachIndexed(Predicate pred) {
 		for (int i = 0; i < N(); i++) {
 			for(int j = 0; j<M(); j++){
@@ -167,10 +185,8 @@ template<typename T>
 Matrix<T> operator*(const Matrix<T> &a, const Matrix<T> &b) {
     assert(a.M() == b.N());
 
-    // Create a new matrix to store the result
     Matrix<T> result(a.N(), b.M());
 
-    // Perform matrix multiplication
     for (size_t i = 0; i < a.N(); ++i) {
         for (size_t j = 0; j < b.M(); ++j) {
             T sum = 0;
@@ -181,6 +197,28 @@ Matrix<T> operator*(const Matrix<T> &a, const Matrix<T> &b) {
         }
     }
 
+    return result;
+}
+
+template<typename T>
+Matrix<T> operator*(const Matrix<T>& a, float scalar) {
+    Matrix<T> result(a.N(), a.M());
+    for (size_t i = 0; i < a.N(); ++i) {
+        for (size_t j = 0; j < a.M(); ++j) {
+            result[i][j] = a[i][j] * scalar;
+        }
+    }
+    return result;
+}
+
+template<typename T>
+Matrix<T> Matrix<T>::Transpose() const{
+    Matrix<T> result(M(), N());
+    for (size_t i = 0; i < N(); ++i) {
+        for (size_t j = 0; j < M(); ++j) {
+            result[j][i] = Get(i, j);
+        }
+    }
     return result;
 }
 
@@ -201,6 +239,22 @@ Matrix<T> operator-(const Matrix<T>& a, const Matrix<T>& b) {
     return result;
 }
 
+template<typename T>
+Matrix<T> operator+(const Matrix<T>& a, const Matrix<T>& b) {
+    assert (!(a.N() != b.N() || a.M() != b.M()));
+
+    // Create a new matrix to store the result
+    Matrix<T> result(a.N(), a.M());
+
+    // Perform matrix subtraction
+    for (size_t i = 0; i < a.N(); ++i) {
+        for (size_t j = 0; j < a.M(); ++j) {
+            result[i][j] = a[i][j] + b[i][j];
+        }
+    }
+
+    return result;
+}
 
 template<typename Type>
 bool operator==(const Matrix<Type>& lhs, const Matrix<Type>& rhs) {

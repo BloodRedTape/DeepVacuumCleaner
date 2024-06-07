@@ -57,6 +57,12 @@ public:
 	static NeuralNetworkAgent Crossover(const NeuralNetworkAgent& first, const NeuralNetworkAgent &second);
 
 	static NeuralNetworkAgent Mutate(const NeuralNetworkAgent& agent, float chance, float range);
+
+	static Matrix<float> StateToMatrix(const VacuumCleanerState &state);
+
+	static sf::Vector2f MoveFromMatrix(const Matrix<float> &out);
+
+	static Matrix<float> MoveToMatrix(sf::Vector2f move);
 };
 
 

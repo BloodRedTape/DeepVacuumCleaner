@@ -8,6 +8,8 @@ namespace ActivationFunction{
 	using Ptr = float (*)(float);
 
 	ActivationFunction::Ptr Find(const std::string& name);
+
+    ActivationFunction::Ptr FindDerivative(const std::string& name);
 }
 
 class Layer {
@@ -33,7 +35,13 @@ public:
 
 	const Matrix<float>& Biases()const;
 
+	Matrix<float>& Weights();
+
+	Matrix<float>& Biases();
+
 	const std::string& FunctionName()const;
+
+	ActivationFunction::Ptr Function()const;
 
 	bool IsComplete()const;
 
@@ -59,8 +67,12 @@ public:
 
 	NeuralNetwork(std::vector<int> topology, std::vector<std::string> functions);
 
-	Matrix<float> Do(Matrix<float> Input);
+	Matrix<float> Do(Matrix<float> Input)const;
 
+    float Backpropagation(const std::vector<std::pair<Matrix<float>, Matrix<float>>>& dataset, float learning_rate);
+
+    Matrix<float> MeanSquaredErrorDerivative(const Matrix<float>& prediction, const Matrix<float>& target);
+    
 	static NeuralNetwork Crossover(const NeuralNetwork& parent1, const NeuralNetwork& parent2);
 
 	static NeuralNetwork MutateNetwork(const NeuralNetwork& network, float chance, float range);

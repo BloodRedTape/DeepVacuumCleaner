@@ -181,10 +181,15 @@ void MapEditor::Render(sf::RenderTarget& rt) {
 			Render::DrawLine(rt, m_ToolCache.value(), MakeEndPoint(), m_Env.RenderWallHeight);
 		}
 	}
+
 	if(m_Tool == EditTool::Zone){
 		if (m_ToolCache.has_value()) {
 			Render::DrawRect(rt, Math::MakeRect(m_ToolCache.value(), MakeEndPoint()), sf::Color::Yellow * sf::Color(255, 255, 255, 40), 4, sf::Color::Yellow);
 		}
+	}
+
+	if (m_Tool == EditTool::Path) {
+		Render::DrawCircle(rt, WorldMousePosition(), 4.f);
 	}
 
 	m_Cleaner.Draw(rt);
@@ -224,7 +229,12 @@ void MapEditor::OnEvent(const sf::Event& e){
 				if(mouse->button == sf::Mouse::Button::Right && m_ToolCache.has_value()){
 					m_Env.ZonesToClean.push_back(Math::MakeRect(m_ToolCache.value(), MakeEndPoint()));
 				}
+			}
 
+			if (m_Tool == EditTool::Path) {
+				if(mouse->button == sf::Mouse::Button::Right){
+					m_Env.Path.push_back(MakeEndPoint());
+				}
 			}
 			m_ToolCache.reset();
 		}

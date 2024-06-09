@@ -10,11 +10,12 @@
 enum class EditTool: std::size_t{
 	Wall = 0,
 	Zone = 1,
-	Start = 2
+	Start = 2,
+	Path = 3
 };
 
 inline std::vector<std::string> EditToolMembers() {
-	return {"Wall", "Zone", "Start Placement"};
+	return {"Wall", "Zone", "Start Placement", "Path"};
 }
 
 class MapEditor: public ZoomMoveApplication{

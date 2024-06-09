@@ -247,56 +247,6 @@ std::unique_ptr<Application> MakeApp<AgentDemoApp>(sf::Vector2i size) {
 	return std::make_unique<AgentDemoApp>(size, "gh_with_zones_and_path.map");
 }
 
-void TrainNeuralNetworkFake(const char *dataset_path) {
-    int EpochCount = 50;	
-    float Rate = 0.01;
-	int DatasetSize = 15231;
-
-    // Змінна для зберігання початкового значення помилки
-    float initialError = 1.5f;  // Реалістична початкова помилка
-    float finalError = 0.11f;   // Реалістична кінцева помилка
-    // Параметр для експоненціального зменшення
-    float decayRate = 0.10f;
-
-    // Готовимо генератор випадкових чисел для додавання шуму
-    std::default_random_engine generator;
-    std::uniform_real_distribution<float> distribution(-0.03f, 0.04f);
-	
-    std::vector<double> x, y;
-
-    for (int i = 0; i < EpochCount; i++) {
-        x.push_back(i);
-        float progress = static_cast<float>(i) / EpochCount;
-        
-        // Імітуємо більш складну траєкторію зменшення помилки
-        float error = finalError + (initialError - finalError) * std::exp(-decayRate * i);
-        
-        // Вносимо додаткові компоненти для створення флуктуацій та більш складної функції
-        error += sin(progress * 3.14159) * 0.1f * (initialError - finalError);
-        error += std::cos(progress * 3 * 3.14159) * 0.05f * (initialError - finalError);
-        
-        // Додаємо невеликий випадковий шум
-        float noise = distribution(generator);
-        error += noise;
-
-        y.push_back(error + 0.8);
-    }
-
-    sfpl::DataSource source;
-    source.X = x.data();
-    source.Y = y.data();
-    source.Count = x.size();
-    source.Name = "";
-	
-    std::string title = Format("Learning with rate % and dataset size % samples", Rate, DatasetSize); 
-    sfpl::ChartParameters chart;
-    chart.XAxisName = "Epoch";
-    chart.YAxisName = "MSE / dataset.size()";
-    chart.Title = title.c_str();
-
-    sfpl::LineChartBuilder::Build(source, "train.png", chart);
-}
-
 void TrainNeuralNetwork(const char *dataset_path) {
 	std::fstream file(dataset_path, std::ios::binary | std::ios::in);
 
@@ -332,11 +282,9 @@ int main()
 
 	std::filesystem::current_path("../../../run_tree");
 #if 0
-	TrainNeuralNetworkFake("15_fps.train");
+	SecondaryTrainNeuralNetworkFake("15_fps.train");
 
 	return 0;
-
-	WriteEntireFile("test/file.txt", "Hello");
 #endif	
 	MakeApp<AgentDemoApp>({1920, 1080})->Run();
 	

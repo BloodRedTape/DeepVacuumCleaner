@@ -33,7 +33,7 @@ add_executable (DeepVacuumCleaner
 	"sources/env/wall.cpp" 
 	"sources/env/graph.cpp"
 	"sources/env/path.cpp"
- "sources/agents/agent.cpp" "sources/agents/manual.cpp")
+ "sources/agents/agent.cpp" "sources/agents/manual.cpp" "sources/plot.cpp")
 
 target_include_directories(DeepVacuumCleaner PUBLIC "./sources")
 

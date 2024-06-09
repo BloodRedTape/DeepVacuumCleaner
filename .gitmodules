@@ -7,3 +7,6 @@
 [submodule "libs/imgui"]
 	path = libs/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "libs/sfpl"]
+	path = libs/sfpl
+	url = git@github.com:BloodRedTape/sfpl.git

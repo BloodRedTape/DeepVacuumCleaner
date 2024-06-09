@@ -3,6 +3,7 @@
 #include "model/evolution_training.hpp"
 #include "agents/stupid_agent.hpp"
 #include "agents/nn_agent.hpp"
+#include "agents/manual.hpp"
 #include "utils/imgui.hpp"
 #include "utils/math.hpp"
 #include <iostream>
@@ -103,6 +104,15 @@ private:
 
 	bool m_CollectData = false;
 	std::string m_Filename;
+	
+	bool m_DrawPath = false;
+	bool m_DrawZones = false;
+	bool m_DrawCoveredPath = true;
+	bool m_CollectCoveredPath = true;
+	std::vector<sf::CircleShape> m_CoveredPath;
+	float m_CoveredPathSampleRate = 1.f;
+	float m_Timer = 0;
+	std::size_t m_CollisionsCount = 5;
 public:
 	AgentDemoApp(sf::Vector2i size, std::optional<std::string> map):
 		Super(size)
@@ -111,16 +121,18 @@ public:
 			m_Env.LoadFromFile(map.value());
 
 		//m_Window.setVerticalSyncEnabled(true);
-		m_Window.setFramerateLimit(15);
+		m_Window.setFramerateLimit(60);
 		m_View.zoom(2);
 
 		m_Agents.push_back(std::make_unique<StupidAgent>());
+		m_Agents.push_back(std::make_unique<ManualAgent>());
 
-		m_Cleaner.Position = sf::Vector2f(m_Env.StartPosition);
+		Reset();
 	}
 
 	virtual void Tick(float dt) override{
 		Super::Tick(dt);
+
 
 		for(int i = 0; i < int(m_Speed); i++){
 			if(m_CollectData && !Agent().HasFinished(m_Cleaner, m_Env)){
@@ -128,7 +140,23 @@ public:
 				VacuumCleanerState state = m_Cleaner.GetState(Agent().Goal(), m_Env);
 				m_TraningData.push_back({std::move(state), move});
 			}
+
+			m_Timer += dt;
+
 			Agent().Update(dt, m_Cleaner, m_Env);
+			
+			if(m_Timer > m_CoveredPathSampleRate){
+				m_Timer -= m_CoveredPathSampleRate;
+
+				if(m_CollectCoveredPath){
+
+					sf::CircleShape circle(CleanerRadius);
+					circle.setFillColor(sf::Color(255, 255, 255, 60));
+					circle.setPosition(m_Cleaner.Position);
+					circle.setOrigin({CleanerRadius, CleanerRadius});
+					m_CoveredPath.push_back(circle);
+				}
+			}
 		}
 	}
 
@@ -143,10 +171,17 @@ public:
 			Reset();
 
 		ImGui::Text("Goal: %d", Agent().Goal());
+		ImGui::Text("Walls Colisions: %d", m_CollisionsCount);
 		ImGui::DragFloat("Speed", &m_Speed, 1.f, 1.f, 100);
 
 		if(ImGui::Button("Reset"))
 			Reset();
+
+		ImGui::Separator();
+
+		ImGui::Checkbox("Collect Covered Space", &m_CollectCoveredPath);
+		ImGui::Checkbox("Draw Covered Space", &m_DrawCoveredPath);
+		ImGui::InputFloat("Covered Space Sample Rate (seconds)", &m_CoveredPathSampleRate);
 
 		ImGui::Separator();
 		ImGui::Checkbox("Collect Samples", &m_CollectData);
@@ -156,6 +191,20 @@ public:
 			std::fstream file(m_Filename + ".train", std::ios::binary | std::ios::out);
 			Serializer<decltype(m_TraningData)>::ToStream(m_TraningData, file);
 		}
+		ImGui::Separator();
+		for (auto file : std::filesystem::directory_iterator(".")) {
+			if(!file.is_regular_file())
+				continue;
+
+			if(file.path().extension() != ".map")
+				continue;
+
+			if (ImGui::Button(file.path().string().c_str())) {
+				m_Env.Clear();
+				m_Env.LoadFromFile(file.path().string());
+			}
+		}
+
 
 		ImGui::End();
 	}
@@ -172,7 +221,12 @@ public:
 	virtual void Render(sf::RenderTarget& rt) override{
 		Super::Render(rt);
 
-		m_Env.Draw(rt, Environment::PathWithColorLines, true);
+		m_Env.Draw(rt, m_DrawPath ? Environment::PathWithColorLines : Environment::NoPath, m_DrawZones);
+
+		for(const auto &shape: m_CoveredPath){
+			rt.draw(shape);
+		}
+
 		m_Cleaner.Draw(rt);
 	}
 
@@ -195,7 +249,7 @@ std::unique_ptr<Application> MakeApp<AgentDemoApp>(sf::Vector2i size) {
 
 void TrainNeuralNetworkFake(const char *dataset_path) {
     int EpochCount = 50;	
-    float Rate = 0.3;
+    float Rate = 0.01;
 	int DatasetSize = 15231;
 
     // Змінна для зберігання початкового значення помилки
@@ -284,7 +338,7 @@ int main()
 
 	WriteEntireFile("test/file.txt", "Hello");
 #endif	
-	MakeApp<MapEditor>({1920, 1080})->Run();
+	MakeApp<AgentDemoApp>({1920, 1080})->Run();
 	
 	return 0;
 }

@@ -16,5 +16,7 @@ public:
 
 	virtual std::string Name()const = 0;
 
+	virtual void DrawDebugData(sf::RenderTarget &rt){};
+
 	bool HasFinished(const VacuumCleaner &cleaner, const Environment &env)const;
 };

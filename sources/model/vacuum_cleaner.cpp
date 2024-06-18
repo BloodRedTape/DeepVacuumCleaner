@@ -39,20 +39,34 @@ sf::Vector2f VacuumCleaner::Direction()const {
 	return Math::RotationToDirection(Rotation);
 }
 
+VacuumCleanerSensorsState VacuumCleaner::GetSensorsState(const Environment& env)const {
+	VacuumCleanerSensorsState state;
+
+	for (auto sensor: Sensors) {
+		auto direction = Math::RotationToDirection(Rotation + sensor.Rotation);
+#if 0
+		auto start = Position + CleanerRadius * direction; 
+#else
+		auto start = Position;
+#endif
+		auto[distance, normal] = Wall::TraceNearestObstacleWithNormal(start, direction, env.Walls);
+		state.SensorsData.push_back(distance);
+		state.SensorsIntersectionNormal.push_back(normal);
+	}
+
+	return state;
+}
+
+
 VacuumCleanerState VacuumCleaner::GetState(std::size_t current_goal, const Environment& env)const {
-	VacuumCleanerState state;
+	VacuumCleanerState state = GetSensorsState(env);
 	sf::Vector2f goal(env.Path[current_goal]);
 
 	auto direction = goal - Position;
 	
 	float difference_with_goal = acos(direction.normalized().dot(Direction().normalized())) / 3.14 * 180;
-		
-	for (auto sensor: Sensors) {
-		auto direction = Math::RotationToDirection(Rotation + sensor.Rotation);
-		auto start = Position + CleanerRadius * direction; 
-
-		state.SensorsData.push_back(Wall::TraceNearestObstacle(start, direction, env.Walls));
-	}
+	
+	state = GetSensorsState(env);
 
 	state.RotationToGoal = difference_with_goal;
 	state.DistanceToGoal = direction.length();
@@ -62,17 +76,26 @@ VacuumCleanerState VacuumCleaner::GetState(std::size_t current_goal, const Envir
 
 void VacuumCleaner::DrawIntersections(sf::RenderTarget& rt, const Environment &env) {
 	const auto &cleaner = *this;
+	
+	auto state = cleaner.GetSensorsState(env);
+
+	const float radius = 5;
+	const float normal_size = 40.f;
 
 	for (int i = 0; i < cleaner.Sensors.size(); i++) {
-		const auto &sensor = cleaner.Sensors[i];
 
-		auto direction = Math::RotationToDirection(cleaner.Rotation + sensor.Rotation);
-		auto start = cleaner.Position + CleanerRadius * direction; 
+		auto direction = Math::RotationToDirection(cleaner.Rotation + cleaner.Sensors[i].Rotation);
+		auto start = cleaner.Position; 
 
-		float intersect = Wall::TraceNearestObstacle(start, direction, env.Walls);
+		float distance = state.SensorsData[i];
+		sf::Vector2f normal = state.SensorsIntersectionNormal[i];
 			
-		const float radius = 5;
 
-		Render::DrawCircle(rt, start + direction * intersect, radius, sf::Color::Red);
+		auto intersection_point = start + direction * distance;
+
+		Render::DrawCircle(rt, intersection_point, radius, sf::Color::Red);
+
+
+		Render::DrawLine(rt, intersection_point, intersection_point + normal * normal_size, 4.f, sf::Color::Red);
 	}
 }

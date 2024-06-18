@@ -8,4 +8,6 @@ struct Wall {
 	sf::Vector2i End;
 
 	static float TraceNearestObstacle(sf::Vector2f position, sf::Vector2f direction, const std::vector<Wall> &walls);
+
+	static std::pair<float, sf::Vector2f> TraceNearestObstacleWithNormal(sf::Vector2f position, sf::Vector2f direction, const std::vector<Wall> &walls);
 };

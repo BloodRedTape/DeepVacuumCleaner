@@ -303,3 +303,10 @@ sf::Vector2i MapEditor::TryGridSnap(sf::Vector2i point) const{
 	return point;
 }
 
+
+int main() {
+	std::filesystem::current_path("../../../run_tree");
+
+	MapEditor({1920, 1080}).Run();
+}
+

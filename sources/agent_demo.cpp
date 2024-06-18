@@ -1,93 +1,10 @@
-﻿#include "application.hpp"
-#include "map_editor.hpp"
-#include "model/evolution_training.hpp"
+#include <optional>
+#include "application.hpp"
 #include "agents/stupid_agent.hpp"
 #include "agents/nn_agent.hpp"
 #include "agents/manual.hpp"
 #include "utils/imgui.hpp"
 #include "utils/math.hpp"
-#include <iostream>
-#include <sstream>
-#include <filesystem>
-#include <random>
-#include <bsl/file.hpp>
-#include <bsl/log.hpp>
-#include <sfpl.hpp>
-
-class EvolutionTrainingApp: public ZoomMoveApplication{
-	using Super = ZoomMoveApplication;
-private:
-	EvolutionTraining m_Evo;
-
-	bool m_IsPaused = false;
-	bool m_IsDebug = false;
-public:
-	EvolutionTrainingApp(sf::Vector2i size, const std::string &best, const std::string &map):
-		Super(size),
-		m_Evo(best, map)
-	{
-		m_View.zoom(2);
-		m_Window.setFramerateLimit(1000);
-	}
-
-	virtual void Tick(float dt) override{
-		Super::Tick(dt);
-
-		int num_per_frame = 400;
-
-		if(m_IsPaused)
-			return;
-
-		for (int i = 0; i < num_per_frame; i++) {
-			m_Evo.Tick(dt / num_per_frame);
-		}
-	}
-
-	void OnImGui()override {
-		
-		ImGui::Begin("Training");
-		
-		if(ImGui::Button("SaveBest"))
-			m_Evo.SaveBest();
-
-		ImGui::End();
-	}
-
-	virtual void Render(sf::RenderTarget& rt) override{
-		Super::Render(rt);
-
-		m_Evo.Draw(rt, m_IsDebug);
-	}
-};
-
-class EvolutionDemoApp: public ZoomMoveApplication{
-	using Super = ZoomMoveApplication;
-private:
-	VacuumCleanerOperator m_Cleaner;
-	Environment m_Env;
-public:
-	EvolutionDemoApp(sf::Vector2i size):
-		Super(size)
-	{
-		m_Cleaner.Agent().LoadFromFile("best13/1.bin");
-		m_Env.LoadFromFile("room1.map");
-		m_Window.setFramerateLimit(60);
-		m_View.zoom(2);
-	}
-
-	virtual void Tick(float dt) override{
-		Super::Tick(dt);
-
-		m_Cleaner.Iterate(m_Env, dt, 0);
-	}
-
-	virtual void Render(sf::RenderTarget& rt) override{
-		Super::Render(rt);
-
-		m_Env.Draw(rt);
-		m_Cleaner.Draw(rt);
-	}
-};
 
 class AgentDemoApp: public ZoomMoveApplication{
 	using Super = ZoomMoveApplication;
@@ -105,12 +22,15 @@ private:
 	bool m_CollectData = false;
 	std::string m_Filename;
 	
+	bool m_DrawSensorsState = false;
+
 	bool m_DrawPath = false;
 	bool m_DrawZones = false;
 	bool m_DrawCoveredPath = true;
 	bool m_CollectCoveredPath = true;
+
 	std::vector<sf::CircleShape> m_CoveredPath;
-	float m_CoveredPathSampleRate = 1.f;
+	float m_CoveredPathSampleRate = 0.3f;
 	float m_Timer = 0;
 	std::size_t m_CollisionsCount = 5;
 public:
@@ -124,6 +44,7 @@ public:
 		m_Window.setFramerateLimit(60);
 		m_View.zoom(2);
 
+		m_Agents.push_back(std::make_unique<NNAgent>());
 		m_Agents.push_back(std::make_unique<StupidAgent>());
 		m_Agents.push_back(std::make_unique<ManualAgent>());
 
@@ -151,7 +72,8 @@ public:
 				if(m_CollectCoveredPath){
 
 					sf::CircleShape circle(CleanerRadius);
-					circle.setFillColor(sf::Color(255, 255, 255, 60));
+					//circle.setFillColor(sf::Color(255, 255, 255, 60));
+					circle.setFillColor(sf::Color(80, 80, 80, 255));
 					circle.setPosition(m_Cleaner.Position);
 					circle.setOrigin({CleanerRadius, CleanerRadius});
 					m_CoveredPath.push_back(circle);
@@ -182,7 +104,9 @@ public:
 		ImGui::Checkbox("Collect Covered Space", &m_CollectCoveredPath);
 		ImGui::Checkbox("Draw Covered Space", &m_DrawCoveredPath);
 		ImGui::InputFloat("Covered Space Sample Rate (seconds)", &m_CoveredPathSampleRate);
+		ImGui::Separator();
 
+		ImGui::Checkbox("Draw Sensors State", &m_DrawSensorsState);
 		ImGui::Separator();
 		ImGui::Checkbox("Collect Samples", &m_CollectData);
 		ImGui::Text("Samples: %d", m_TraningData.size());
@@ -228,65 +152,18 @@ public:
 		}
 
 		m_Cleaner.Draw(rt);
+
+		if(m_DrawSensorsState)
+			m_Cleaner.DrawIntersections(rt, m_Env);
+
+		Agent().DrawDebugData(rt);
 	}
 
 };
 
-template<typename AppType>
-std::unique_ptr<Application> MakeApp(sf::Vector2i size) {
-	return std::make_unique<AppType>(size);
-}
 
-template<>
-std::unique_ptr<Application> MakeApp<EvolutionTrainingApp>(sf::Vector2i size) {
-	return std::make_unique<EvolutionTrainingApp>(size, "best.mod", "room1_with_path.map");
-}
-
-template<>
-std::unique_ptr<Application> MakeApp<AgentDemoApp>(sf::Vector2i size) {
-	return std::make_unique<AgentDemoApp>(size, "gh_with_zones_and_path.map");
-}
-
-void TrainNeuralNetwork(const char *dataset_path) {
-	std::fstream file(dataset_path, std::ios::binary | std::ios::in);
-
-	std::vector<std::pair<VacuumCleanerState, sf::Vector2f>> data;
-	data = Serializer<decltype(data)>::FromStream(file).value_or(data);
-
-	std::vector<std::pair<Matrix<float>, Matrix<float>>> dataset;
-	dataset.reserve(data.size());
-	for (auto& [state, move] : data) {
-		dataset.emplace_back(NeuralNetworkAgent::StateToMatrix(state), NeuralNetworkAgent::MoveToMatrix(move));
-	}
-
-	VacuumCleaner cleaner;
-
-	NeuralNetwork nn(
-		{(int)cleaner.Sensors.size() + 2, 32, 20, 10, 2},
-		{"None", "Tanh", "None", "Tanh", "Tanh"}
-	);
-	int EpochCount = 5;	
-	float Rate = 0.3;
-
-	for(int i = 0; i<EpochCount; i++){
-		float value = nn.Backpropagation(dataset, Rate);
-
-		Println("Epoch: %, Value: %", i, value);
-	}
-	
-}
-
-int main()
-{
-	srand(time(0));
-
+int main() {
 	std::filesystem::current_path("../../../run_tree");
-#if 0
-	SecondaryTrainNeuralNetworkFake("15_fps.train");
 
-	return 0;
-#endif	
-	MakeApp<AgentDemoApp>({1920, 1080})->Run();
-	
-	return 0;
+	AgentDemoApp({1920, 1080}, "diplom_demo.map").Run();
 }

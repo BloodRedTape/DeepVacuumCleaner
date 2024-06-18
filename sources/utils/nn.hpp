@@ -57,6 +57,8 @@ class NeuralNetwork {
 	std::vector<int> m_Topology;
 	std::vector<std::string> m_Functions;
 public:
+	NeuralNetwork() = default;
+
 	NeuralNetwork(NeuralNetwork &&) = default;
 	NeuralNetwork(const NeuralNetwork &) = default;
 

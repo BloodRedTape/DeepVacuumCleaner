@@ -29,6 +29,20 @@ namespace Math{
 		return t * Forward;
 	}
 
+	inline sf::Vector2f Project(const sf::Vector2f& a, const sf::Vector2f& onto) {
+		float dotAB = a.dot(onto);
+		float dotBB = onto.dot(onto); // Equivalent to |b|^2, since |b|^2 = b • b
+
+		if (dotBB == 0) {
+			// Avoid division by zero if 'b' is a zero vector
+			return {};
+		}
+
+		float projectionScalar = dotAB / dotBB;
+
+		return projectionScalar * onto;
+	}
+
 	
 	template<typename T>
 	inline bool IsRectInside(const sf::Rect<T>& inner, const sf::Rect<T>& outer) {
@@ -57,6 +71,36 @@ namespace Math{
             return t1;
 
         return {};
+	}
+
+	inline std::optional<std::pair<float, sf::Vector2f>> RayLineIntersectionWithNormal(const sf::Vector2f& rayOrigin, const sf::Vector2f& rayDirection, const sf::Vector2f& lineStart, const sf::Vector2f& lineEnd) {
+		auto v1 = rayOrigin - lineStart;
+		auto v2 = lineEnd - lineStart;
+		auto v3 = sf::Vector2f(-rayDirection.y, rayDirection.x);
+
+		auto dot = v2.x * v3.x + v2.y * v3.y;
+		if (std::abs(dot) < 0.000001)
+			return {};
+
+		auto t1 = (v2.x * v1.y - v2.y * v1.x) / dot;
+		auto t2 = (v1.x * v3.x + v1.y * v3.y) / dot;
+    
+		if (t1 >= 0.0 && (t2 >= 0.0 && t2 <= 1.0)) {
+			// Calculate the normal to the line
+			auto normal = sf::Vector2f(lineEnd.y - lineStart.y, lineStart.x - lineEnd.x);
+			float length = std::sqrt(normal.x * normal.x + normal.y * normal.y);
+        
+			// Normalize the normal if length is not zero
+			if (length != 0.0f) {
+				normal /= length;
+			}
+
+			normal *= -Math::Sign(normal.dot(rayDirection.normalized()));
+
+			return std::make_pair(t1, normal);
+		}
+    
+		return {};
 	}
 
 	inline bool LineCircleIntersection(sf::Vector2f start, sf::Vector2f end, sf::Vector2f circle, float radius) {
